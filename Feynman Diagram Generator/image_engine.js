@@ -595,10 +595,96 @@
     `;
   }
 
+  /**
+   * Extracts only minimal particle identity info
+   */
+  function extractParticleInfo(p) {
+    if (!p) return null;
+    return {
+      name: p.name || p.id || '',
+      symbol: p.symbol || p.name || p.id || '',
+      matterType: p.matterType || 'particle' // 'particle', 'antiparticle', or 'both'
+    };
+  }
+
+  /**
+   * Captures all diagram geometry, positions, vertices, and lines without circular refs
+   */
+  function extractDiagramData(diag) {
+    const inStates = (diag.inStates || []).map((is, idx) => ({
+      index: idx,
+      type: 'inState',
+      particle: extractParticleInfo(is.particle),
+      pos: is.pos ? { x: is.pos.x, y: is.pos.y } : null
+    }));
+
+    const outStates = (diag.outStates || []).map((os, idx) => ({
+      index: idx,
+      type: 'outState',
+      particle: extractParticleInfo(os.particle),
+      pos: os.pos ? { x: os.pos.x, y: os.pos.y } : null
+    }));
+
+    const vertices = (diag.vertices || []).map((v, idx) => ({
+      index: idx,
+      type: 'vertex',
+      pos: v.pos ? { x: v.pos.x, y: v.pos.y } : null,
+      order: v.type && v.type.order ? { ...v.type.order } : {}
+    }));
+
+    const lines = (diag.lines || []).map((l, idx) => {
+      let inPortRef = null;
+      if (l.inPort) {
+        const inIdx = diag.inStates.indexOf(l.inPort);
+        if (inIdx !== -1) {
+          inPortRef = { type: 'inState', index: inIdx };
+        } else {
+          const vIdx = diag.vertices.indexOf(l.inPort);
+          if (vIdx !== -1) inPortRef = { type: 'vertex', index: vIdx };
+        }
+      }
+
+      let outPortRef = null;
+      if (l.outPort) {
+        const outIdx = diag.outStates.indexOf(l.outPort);
+        if (outIdx !== -1) {
+          outPortRef = { type: 'outState', index: outIdx };
+        } else {
+          const vIdx = diag.vertices.indexOf(l.outPort);
+          if (vIdx !== -1) outPortRef = { type: 'vertex', index: vIdx };
+        }
+      }
+
+      return {
+        index: idx,
+        particle: extractParticleInfo(l.particle),
+        particleType: l.particleType || (l.particle ? l.particle.matterType : 'particle'),
+        shape: l.shape || 'straight',
+        sagitta: l.sagitta || 0,
+        inPos: l.inPos ? { x: l.inPos.x, y: l.inPos.y } : null,
+        outPos: l.outPos ? { x: l.outPos.x, y: l.outPos.y } : null,
+        inPort: inPortRef,
+        outPort: outPortRef
+      };
+    });
+
+    return {
+      order: { ...(diag.order || {}) },
+      totalOrder: diag.totalOrder || 0,
+      noOfLoops: diag.noOfLoops || 0,
+      inStates,
+      outStates,
+      vertices,
+      lines
+    };
+  }
+
   function renderDiagramToContainer(gridElement, exactOrder, diagramIndex, diag) {
     computeDiagramPositions(diag);
 
     const visualSvg = renderDiagramSVG(diag);
+    const diagramData = extractDiagramData(diag);
+    const serializedJson = JSON.stringify(diagramData);
 
     // Format individual coupling orders (e.g. "QED: 2, EW: 1")
     const couplingEntries = Object.entries(diag.order || {}).filter(([_, val]) => (val || 0) > 0);
@@ -607,8 +693,16 @@
       : '<span class="text-slate-500">Order 0</span>';
 
     const card = document.createElement('div');
-    card.className = 'bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-3 flex flex-col justify-between';
+    card.className = 'diagram-card bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-3 flex flex-col justify-between';
+    card.id = `diagram-card-${diagramIndex}`;
+
+    // Direct in-memory attachment
+    card._diagramData = diagramData;
+
     card.innerHTML = `
+      <!-- Hidden Diagram Data Block (Not displayed on screen) -->
+      <template class="diagram-data" style="display: none;">${serializedJson}</template>
+
       <div class="space-y-3">
         <div class="flex items-center justify-between pb-2 border-b border-slate-800 text-xs font-mono-code flex-wrap gap-2">
           <span class="font-bold text-slate-100">Diagram #${diagramIndex}</span>
