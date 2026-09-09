@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Particle Physics Calculators</title>
+
+  <link rel="icon" type="image/png" href="icon.png">
+  <link rel="icon" type="image/x-icon" href="icon.ico">
+
+  <style>
+    :root {
+      --bg-color: #0d1117;
+      --card-bg: #161b22;
+      --card-hover-bg: #21262d;
+      --border-color: #30363d;
+      --border-hover: #58a6ff;
+      --text-main: #f0f6fc;
+      --text-muted: #8b949e;
+      --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: var(--font-family);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+
+    .author {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .tools-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      width: 100%;
+      max-width: 360px;
+    }
+
+    .tool-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      background-color: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      text-decoration: none;
+      color: var(--text-main);
+      font-size: 1.05rem;
+      font-weight: 500;
+      transition: background-color 0.2s, border-color 0.2s, transform 0.15s;
+    }
+
+    .tool-btn:hover {
+      background-color: var(--card-hover-bg);
+      border-color: var(--border-hover);
+      transform: translateY(-1px);
+    }
+
+    .tool-icon {
+      width: 24px;
+      height: 24px;
+      object-fit: contain;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Particle Physics Calculators</h1>
+    <p class="author">by DGA</p>
+  </header>
+
+  <main class="tools-list">
+    <a href="./Scientific%20Calculator/calculator.html" class="tool-btn">
+      <img src="./Scientific%20Calculator/icon.png" alt="" class="tool-icon" onerror="this.style.display='none'">
+      <span>Scientific Calculator</span>
+    </a>
+
+    <a href="./Feynman%20Diagram%20Generator/input.html" class="tool-btn">
+      <img src="./Feynman%20Diagram%20Generator/icon.png" alt="" class="tool-icon" onerror="this.style.display='none'">
+      <span>Feynman Diagram Generator</span>
+    </a>
+  </main>
+
+</body>
+</html>
