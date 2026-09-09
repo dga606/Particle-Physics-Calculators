@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QED & Standard Model Feynman Studio - Input Interface</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .font-mono-code { font-family: 'Fira Code', monospace; }
+        .overline { text-decoration: overline; text-decoration-thickness: 1.5px; }
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
+        ::-webkit-scrollbar-thumb { background: rgba(51, 65, 85, 0.8); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(71, 85, 105, 1); }
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+    </style>
+</head>
+<body class="min-h-full flex flex-col bg-slate-950 text-slate-100 antialiased selection:bg-indigo-500 selection:text-white p-3 sm:p-5">
+
+    <main class="max-w-6xl w-full mx-auto space-y-4">
+
+        <!-- Top Status & Utility Bar -->
+        <div class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-2.5 sm:p-3 space-y-2.5 shadow-sm">
+            <div class="flex items-center justify-between px-0.5">
+                <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span class="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-200">Scattering Setup</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="exportPreset()" title="Export current setup as preset" 
+                        class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition-all flex items-center gap-1.5 shadow-sm">
+                        <i class="fa-solid fa-file-export text-[11px] text-indigo-400"></i>
+                        <span>Export Preset</span>
+                    </button>
+                    <button type="button" onclick="importPreset()" title="Import preset configuration" 
+                        class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition-all flex items-center gap-1.5 shadow-sm">
+                        <i class="fa-solid fa-file-import text-[11px] text-teal-400"></i>
+                        <span>Import Preset</span>
+                    </button>
+                    <button type="button" onclick="resetAllScattering()" title="Reset scattering input fields" 
+                        class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-rose-950/50 hover:text-rose-300 text-slate-400 border border-slate-800 transition-all flex items-center gap-1.5 shadow-sm">
+                        <i class="fa-solid fa-rotate-right text-[11px]"></i>
+                        <span>Reset Scattering</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Management Buttons -->
+            <div class="flex items-start justify-between flex-wrap gap-2 pt-1 border-t border-slate-800/70">
+                <div class="flex items-start gap-3 flex-wrap">
+                    <div class="flex flex-col gap-1.5">
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="openCustomParticleModal()" title="Add a custom particle or pair"
+                                class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 hover:text-white border border-indigo-500/50 transition-all flex items-center gap-1.5 shadow-sm">
+                                <i class="fa-solid fa-plus text-[11px]"></i>
+                                <span>Add Custom Particle</span>
+                            </button>
+                            <button type="button" onclick="openRemoveParticleModal()" title="Manage and remove custom particles"
+                                class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-rose-950/40 text-slate-400 hover:text-rose-300 border border-slate-800 transition-all flex items-center gap-1.5 shadow-sm">
+                                <i class="fa-solid fa-trash-can text-[11px] text-rose-400"></i>
+                                <span>Remove Custom Particle</span>
+                            </button>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="openAddListModal()" title="Create a custom particle list"
+                                class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-teal-600/30 hover:bg-teal-600 text-teal-200 hover:text-white border border-teal-500/50 transition-all flex items-center gap-1.5 shadow-sm">
+                                <i class="fa-solid fa-list-check text-[11px]"></i>
+                                <span>Add Custom List</span>
+                            </button>
+                            <button type="button" onclick="openRemoveListModal()" title="Manage and remove custom particle lists"
+                                class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-rose-950/40 text-slate-400 hover:text-rose-300 border border-slate-800 transition-all flex items-center gap-1.5 shadow-sm">
+                                <i class="fa-solid fa-rectangle-xmark text-[11px] text-teal-400"></i>
+                                <span>Remove Custom List</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="openVertexModal()" title="Add a custom interaction vertex"
+                            class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-600/30 hover:bg-amber-600 text-amber-200 hover:text-white border border-amber-500/50 transition-all flex items-center gap-1.5 shadow-sm">
+                            <i class="fa-solid fa-circle-nodes text-[11px]"></i>
+                            <span>Add Custom Vertex</span>
+                        </button>
+                        <button type="button" onclick="openRemoveVertexModal()" title="Manage and remove custom interaction vertices"
+                            class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-rose-950/40 text-slate-400 hover:text-rose-300 border border-slate-800 transition-all flex items-center gap-1.5 shadow-sm">
+                            <i class="fa-solid fa-diagram-project text-[11px] text-amber-400"></i>
+                            <span>Remove Custom Vertex</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3-Column Table Layout -->
+        <div class="grid grid-cols-12 gap-2 sm:gap-3 items-stretch">
+            <div id="card-incoming-container" class="col-span-3 bg-slate-900/90 border border-indigo-500/50 rounded-2xl p-2.5 sm:p-3 shadow-xl flex flex-col h-full transition-all ring-1 ring-indigo-500/30">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+                    <div class="flex items-center gap-1.5 truncate">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>
+                        <h3 class="font-bold text-xs uppercase tracking-wider text-slate-200 truncate">Incoming</h3>
+                    </div>
+                    <button type="button" onclick="clearList('incoming')" class="text-[10px] text-slate-400 hover:text-rose-400 transition-colors shrink-0 font-medium">Clear</button>
+                </div>
+                <div id="list-incoming" class="flex-1 flex flex-col gap-1.5 min-h-[320px] max-h-[480px] overflow-y-auto bg-slate-950 p-2 rounded-xl border border-slate-800/80 mt-2"></div>
+            </div>
+
+            <div class="col-span-6 bg-slate-900/90 border border-slate-800 rounded-2xl p-2.5 sm:p-3 shadow-xl flex flex-col h-full space-y-2">
+                <div class="bg-slate-950 p-1 rounded-xl border border-slate-800 flex items-center gap-1">
+                    <button type="button" id="mode-incoming-btn" onclick="setTargetMode('incoming')" class="flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 bg-indigo-600 text-white shadow-md">
+                        <i class="fa-solid fa-right-to-bracket text-emerald-300 text-[11px]"></i>
+                        <span>Incoming</span>
+                        <span id="badge-incoming-count" class="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-900/80 text-slate-200 font-mono-code">0</span>
+                    </button>
+                    <button type="button" id="mode-outgoing-btn" onclick="setTargetMode('outgoing')" class="flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-900">
+                        <i class="fa-solid fa-right-from-bracket text-cyan-300 text-[11px]"></i>
+                        <span>Outgoing</span>
+                        <span id="badge-outgoing-count" class="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-900/80 text-slate-400 font-mono-code">0</span>
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2 flex-1">
+                    <div class="space-y-1.5">
+                        <div class="text-[11px] font-bold text-indigo-400 uppercase tracking-wider text-center border-b border-slate-800/80 pb-1">Leptons</div>
+                        <div id="col-leptons" class="space-y-1.5 max-h-[380px] overflow-y-auto pr-0.5"></div>
+                    </div>
+                    <div class="space-y-1.5">
+                        <div class="text-[11px] font-bold text-emerald-400 uppercase tracking-wider text-center border-b border-slate-800/80 pb-1">Quarks</div>
+                        <div id="col-quarks" class="space-y-1.5 max-h-[380px] overflow-y-auto pr-0.5"></div>
+                    </div>
+                    <div class="space-y-1.5">
+                        <div class="text-[11px] font-bold text-amber-400 uppercase tracking-wider text-center border-b border-slate-800/80 pb-1">Bosons</div>
+                        <div id="col-bosons" class="space-y-1.5 max-h-[380px] overflow-y-auto pr-0.5"></div>
+                    </div>
+                </div>
+
+                <div id="section-other-particles" class="border-t border-slate-800 pt-2 space-y-1.5 hidden">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[11px] font-bold text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <i class="fa-solid fa-atom text-[10px]"></i><span>Other Particles</span>
+                        </span>
+                        <span id="badge-other-count" class="text-[9px] font-mono-code text-slate-500">0 particles</span>
+                    </div>
+                    <div id="col-other" class="grid grid-cols-3 gap-2 max-h-[140px] overflow-y-auto pr-0.5"></div>
+                </div>
+            </div>
+
+            <div id="card-outgoing-container" class="col-span-3 bg-slate-900/90 border border-slate-800 rounded-2xl p-2.5 sm:p-3 shadow-xl flex flex-col h-full transition-all">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+                    <div class="flex items-center gap-1.5 truncate">
+                        <span class="w-2 h-2 rounded-full bg-cyan-400 shrink-0"></span>
+                        <h3 class="font-bold text-xs uppercase tracking-wider text-slate-200 truncate">Outgoing</h3>
+                    </div>
+                    <button type="button" onclick="clearList('outgoing')" class="text-[10px] text-slate-400 hover:text-rose-400 transition-colors shrink-0 font-medium">Clear</button>
+                </div>
+                <div id="list-outgoing" class="flex-1 flex flex-col gap-1.5 min-h-[320px] max-h-[480px] overflow-y-auto bg-slate-950 p-2 rounded-xl border border-slate-800/80 mt-2"></div>
+            </div>
+        </div>
+
+        <!-- Reaction Formula Box -->
+        <div class="w-full bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 sm:p-5 shadow-xl space-y-3.5">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-square-root-variable text-cyan-400 text-base"></i>
+                    <h3 class="font-bold text-xs sm:text-sm uppercase tracking-wider text-slate-200">Reaction Formula & Invariant Conservation</h3>
+                </div>
+                <span id="conservation-badge" class="text-xs font-semibold px-3 py-1 rounded-full bg-slate-800 text-slate-400 font-mono-code">Empty State</span>
+            </div>
+
+            <div class="bg-slate-950 border border-slate-800/90 rounded-xl p-3 sm:p-4 text-center shadow-inner flex items-center justify-center min-h-[56px]">
+                <div id="reaction-formula" class="font-mono-code text-base sm:text-lg text-cyan-300 font-semibold tracking-wide">(Initial) → (Final)</div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
+                <div id="check-charge" class="relative bg-slate-950 border border-slate-800/80 rounded-xl p-3 sm:p-3.5 transition-all flex flex-col justify-between">
+                    <div class="flex items-center justify-between gap-1 mb-1">
+                        <span class="text-slate-300 text-xs sm:text-sm uppercase font-bold tracking-wider">Electric Charge (Q)</span>
+                        <button type="button" id="toggle-law-charge" onclick="toggleLaw('charge')" class="law-toggle-btn text-[10px] font-semibold uppercase px-2 py-0.5 rounded-md transition-all bg-emerald-950/70 text-emerald-300 border border-emerald-700/50 flex items-center gap-1 shadow-sm shrink-0">
+                            <i class="fa-solid fa-toggle-on text-emerald-400 text-[11px]"></i><span>Active</span>
+                        </button>
+                    </div>
+                    <span id="val-charge" class="font-mono-code font-bold text-slate-400 text-base sm:text-lg md:text-xl mt-1 block">ΔQ = 0</span>
+                </div>
+
+                <div id="check-lepton" class="relative bg-slate-950 border border-slate-800/80 rounded-xl p-3 sm:p-3.5 transition-all flex flex-col justify-between">
+                    <div class="flex items-center justify-between gap-1 mb-1">
+                        <span class="text-slate-300 text-xs sm:text-sm uppercase font-bold tracking-wider">Total Lepton (L)</span>
+                        <button type="button" id="toggle-law-lepton" onclick="toggleLaw('lepton')" class="law-toggle-btn text-[10px] font-semibold uppercase px-2 py-0.5 rounded-md transition-all bg-emerald-950/70 text-emerald-300 border border-emerald-700/50 flex items-center gap-1 shadow-sm shrink-0">
+                            <i class="fa-solid fa-toggle-on text-emerald-400 text-[11px]"></i><span>Active</span>
+                        </button>
+                    </div>
+                    <span id="val-lepton" class="font-mono-code font-bold text-slate-400 text-base sm:text-lg md:text-xl mt-1 block">ΔL = 0</span>
+                </div>
+
+                <div id="check-baryon" class="relative bg-slate-950 border border-slate-800/80 rounded-xl p-3 sm:p-3.5 transition-all flex flex-col justify-between">
+                    <div class="flex items-center justify-between gap-1 mb-1">
+                        <span class="text-slate-300 text-xs sm:text-sm uppercase font-bold tracking-wider">Total Baryon (B)</span>
+                        <button type="button" id="toggle-law-baryon" onclick="toggleLaw('baryon')" class="law-toggle-btn text-[10px] font-semibold uppercase px-2 py-0.5 rounded-md transition-all bg-emerald-950/70 text-emerald-300 border border-emerald-700/50 flex items-center gap-1 shadow-sm shrink-0">
+                            <i class="fa-solid fa-toggle-on text-emerald-400 text-[11px]"></i><span>Active</span>
+                        </button>
+                    </div>
+                    <span id="val-baryon" class="font-mono-code font-bold text-slate-400 text-base sm:text-lg md:text-xl mt-1 block">ΔB = 0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Orders & Constraints -->
+        <div class="w-full bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 sm:p-5 shadow-xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-amber-400 text-base"></i>
+                    <h3 class="font-bold text-xs sm:text-sm uppercase tracking-wider text-slate-200">Orders & Topology Constraints</h3>
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <div class="flex items-center justify-between flex-wrap gap-1">
+                    <span class="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-200 block">Maximum Order of Coupling Constants:</span>
+                    <div class="flex items-center gap-1.5">
+                        <button type="button" onclick="openAddCouplingModal()" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 transition-colors flex items-center gap-1 shadow-sm">
+                            <i class="fa-solid fa-plus text-[10px]"></i><span>Add Coupling</span>
+                        </button>
+                        <button type="button" onclick="openRemoveCouplingModal()" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-rose-950/40 text-slate-400 hover:text-rose-300 border border-slate-800 transition-colors flex items-center gap-1 shadow-sm">
+                            <i class="fa-solid fa-trash-can text-[10px]"></i><span>Remove Coupling</span>
+                        </button>
+                    </div>
+                </div>
+                <div id="coupling-orders-container" class="grid grid-cols-2 sm:grid-cols-4 gap-2.5"></div>
+            </div>
+
+            <div class="flex items-center justify-between p-3 sm:p-4 rounded-xl bg-slate-950 border border-slate-800">
+                <span class="text-sm sm:text-base font-bold text-slate-100">Maximum Number of Loops</span>
+                <div class="flex items-center gap-2 bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-800 shadow-inner">
+                    <button type="button" onclick="adjustLoops(-1)" class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-bold flex items-center justify-center active:scale-95">-</button>
+                    <input type="number" id="max-loops" min="0" value="0" onchange="onLoopsChange(this.value)" class="w-12 sm:w-16 text-center bg-transparent text-sm sm:text-base font-mono-code font-bold text-amber-300 focus:outline-none">
+                    <button type="button" onclick="adjustLoops(1)" class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-bold flex items-center justify-center active:scale-95">+</button>
+                </div>
+            </div>
+
+            <div class="space-y-2 pt-1">
+                <span class="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-200 block">Topological Rules:</span>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <label class="flex items-center justify-between p-3 sm:p-4 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 cursor-pointer transition-all select-none">
+                        <span class="text-xs sm:text-sm font-semibold text-slate-200">Include Disconnected Diagrams</span>
+                        <input type="checkbox" id="chk-disconnected" onchange="onTopologyRuleChange()" class="rounded bg-slate-900 border-slate-700 text-indigo-600 focus:ring-indigo-500 w-4 h-4 shrink-0">
+                    </label>
+                    <label class="flex items-center justify-between p-3 sm:p-4 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 cursor-pointer transition-all select-none">
+                        <span class="text-xs sm:text-sm font-semibold text-slate-200">Include Tadpole Diagrams</span>
+                        <input type="checkbox" id="chk-tadpoles" onchange="onTopologyRuleChange()" class="rounded bg-slate-900 border-slate-700 text-indigo-600 focus:ring-indigo-500 w-4 h-4 shrink-0">
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 sm:p-4 shadow-xl flex items-center justify-between gap-3">
+            <button type="button" id="btn-generate" disabled onclick="MainEngine.generate()"
+                class="px-5 py-2.5 rounded-xl font-semibold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 shadow-md bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700/60">
+                <i class="fa-solid fa-play text-xs"></i><span>Generate Diagrams</span>
+            </button>
+            <span id="generation-status-text" class="text-slate-400 font-mono-code text-xs">Configure initial & final states</span>
+        </div>
+    </main>
+
+    <!-- Custom Particle Modal -->
+    <div id="modal-custom-particle" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 hidden">
+        <div class="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-md w-full p-4 sm:p-5 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h4 class="text-sm font-bold text-slate-100">Add Custom Particle</h4>
+                <button type="button" onclick="closeCustomParticleModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:text-rose-400"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="form-custom-particle" onsubmit="handleCustomParticleSubmit(event)" class="space-y-3.5">
+                <div class="flex items-center justify-between p-2 rounded-xl bg-slate-950 border border-slate-800">
+                    <span class="text-xs font-semibold text-slate-200">Particle Type:</span>
+                    <div class="flex items-center gap-1">
+                        <label class="cursor-pointer text-xs flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-900 text-slate-300 has-[:checked]:bg-indigo-600 has-[:checked]:text-white transition-colors">
+                            <input type="radio" name="custom-pair-type" value="single" checked onchange="updatePairTypeUI()" class="hidden">
+                            <span>Single</span>
+                        </label>
+                        <label class="cursor-pointer text-xs flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-900 text-slate-300 has-[:checked]:bg-indigo-600 has-[:checked]:text-white transition-colors">
+                            <input type="radio" name="custom-pair-type" value="pair" onchange="updatePairTypeUI()" class="hidden">
+                            <span>Pair (+ Anti)</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2.5">
+                    <div class="space-y-1">
+                        <label class="text-[11px] font-bold text-slate-400 uppercase">Symbol</label>
+                        <input type="text" id="cust-symbol" required placeholder="e.g. χ, W'" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-mono-code text-slate-100 focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div id="wrapper-anti-symbol" class="space-y-1 hidden">
+                        <label class="text-[11px] font-bold text-slate-400 uppercase">Anti-Symbol</label>
+                        <input type="text" id="cust-anti-symbol" placeholder="e.g. χ̄" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-mono-code text-slate-100 focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div id="wrapper-name" class="space-y-1">
+                        <label class="text-[11px] font-bold text-slate-400 uppercase">Name / ID</label>
+                        <input type="text" id="cust-id" required placeholder="e.g. chi" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-mono-code text-slate-100 focus:outline-none focus:border-indigo-500">
+                    </div>
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[11px] font-bold text-slate-400 uppercase">Category</label>
+                    <select id="cust-category" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                        <option value="other" selected>Other (Custom)</option>
+                        <option value="lepton">Lepton</option>
+                        <option value="quark">Quark</option>
+                        <option value="boson">Boson</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-3 gap-2 pt-1">
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase">Charge (Q)</label>
+                        <input type="number" step="any" id="cust-charge" value="0" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2 py-1.5 text-xs font-mono-code text-slate-100 text-center">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase">Lepton (L)</label>
+                        <input type="number" step="any" id="cust-lepton" value="0" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2 py-1.5 text-xs font-mono-code text-slate-100 text-center">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase">Baryon (B)</label>
+                        <input type="number" step="any" id="cust-baryon" value="0" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2 py-1.5 text-xs font-mono-code text-slate-100 text-center">
+                    </div>
+                </div>
+                <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+                    <button type="button" onclick="closeCustomParticleModal()" class="px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300">Cancel</button>
+                    <button type="submit" class="px-4 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white">Add</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Remove Custom Particle Modal -->
+    <div id="modal-remove-particle" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 hidden">
+        <div class="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-md w-full p-4 sm:p-5 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h4 class="text-sm font-bold text-slate-100">Remove Custom Particles</h4>
+                <button type="button" onclick="closeRemoveParticleModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:text-rose-400"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="remove-custom-list" class="max-h-[300px] overflow-y-auto space-y-2 pr-1"></div>
+            <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                <button type="button" onclick="removeAllCustomParticles()" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-950/50 hover:bg-rose-900/70 text-rose-300 border border-rose-800/60">Remove All</button>
+                <button type="button" onclick="closeRemoveParticleModal()" class="px-4 py-1.5 rounded-xl text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Coupling Modal -->
+    <div id="modal-add-coupling" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 hidden">
+        <div class="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-sm w-full p-4 sm:p-5 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h4 class="text-sm font-bold text-slate-100">Add Coupling Constant</h4>
+                <button type="button" onclick="closeAddCouplingModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:text-rose-400"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="form-add-coupling" onsubmit="handleAddCouplingSubmit(event)" class="space-y-3">
+                <div class="space-y-1">
+                    <label class="text-[11px] font-bold text-slate-400 uppercase">Coupling Name</label>
+                    <input type="text" id="input-coupling-name" required placeholder="e.g. Graviton, BSM" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-mono-code text-slate-100 focus:outline-none focus:border-amber-500">
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[11px] font-bold text-slate-400 uppercase">Initial Max Order</label>
+                    <input type="number" id="input-coupling-initial" min="0" value="0" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-mono-code text-amber-300">
+                </div>
+                <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+                    <button type="button" onclick="closeAddCouplingModal()" class="px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-800 text-slate-300">Cancel</button>
+                    <button type="submit" class="px-4 py-1.5 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-500 text-white">Add</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Remove Coupling Modal -->
+    <div id="modal-remove-coupling" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 hidden">
+        <div class="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-sm w-full p-4 sm:p-5 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h4 class="text-sm font-bold text-slate-100">Remove Coupling</h4>
+                <button type="button" onclick="closeRemoveCouplingModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:text-rose-400"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="list-remove-coupling" class="max-h-[260px] overflow-y-auto space-y-1.5 pr-1"></div>
+            <div class="flex items-center justify-end pt-2 border-t border-slate-800">
+                <button type="button" onclick="closeRemoveCouplingModal()" class="px-4 py-1.5 rounded-xl text-xs font-medium bg-slate-800 text-slate-300">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Vertex Modal -->
+    <div id="modal-custom-vertex" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 hidden overflow-y-auto">
+        <div class="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-5xl w-full p-3 sm:p-5 shadow-2xl space-y-3.5 my-auto max-h-[95vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                <h4 class="text-sm sm:text-base font-bold text-slate-100">Add Custom Interaction Vertex</h4>
+                <button type="button" onclick="closeVertexModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:text-rose-400"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <div class="flex items-center justify-between gap-2 flex-wrap bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                <div class="flex items-center gap-2 flex-1 min-w-[240px]">
+                    <label class="text-[11px] font-bold text-slate-400 uppercase">Label:</label>
+                    <input type="text" id="vertex-input-id" required placeholder="e.g. e-e-gamma" class="flex-1 bg-slate-900 border border-slate-700/80 rounded-lg px-2.5 py-1 text-xs font-mono-code text-slate-100">
+                </div>
+                <button type="button" onclick="copyReactionToVertex()" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 flex items-center gap-1.5">
+                    <span>Copy Reaction</span>
+                </button>
+            </div>
+            <div class="grid grid-cols-12 gap-2 sm:gap-3 items-stretch">
+                <div id="vtx-card-incoming-container" class="col-span-3 bg-slate-950/80 border border-amber-500/50 rounded-2xl p-2.5 shadow-lg flex flex-col h-full ring-1 ring-amber-500/30">
+                    <div class="flex items-center justify-between pb-1.5 border-b border-slate-800">
+                        <h5 class="font-bold text-[11px] uppercase text-slate-200">Incoming</h5>
+                        <button type="button" onclick="clearVertexList('incoming')" class="text-[10px] text-slate-400 hover:text-rose-400">Clear</button>
+                    </div>
+                    <div id="vtx-list-incoming" class="flex-1 flex flex-col gap-1.5 min-h-[260px] max-h-[340px] overflow-y-auto bg-slate-950 p-2 rounded-xl border border-slate-800/80 mt-2"></div>
+                </div>
+                <div class="col-span-6 bg-slate-950/80 border border-slate-800 rounded-2xl p-2.5 shadow-lg flex flex-col h-full space-y-2">
+                    <div class="bg-slate-900 p-1 rounded-xl border border-slate-800 flex items-center gap-1">
+                        <button type="button" id="vtx-mode-incoming-btn" onclick="setVertexTargetMode('incoming')" class="flex-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-600 text-white">Incoming</button>
+                        <button type="button" id="vtx-mode-outgoing-btn" onclick="setVertexTargetMode('outgoing')" class="flex-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-400">Outgoing</button>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 flex-1">
+                        <div class="space-y-1"><div class="text-[10px] font-bold text-indigo-400 text-center">Leptons</div><div id="vtx-col-leptons" class="space-y-1.5 max-h-[220px] overflow-y-auto pr-0.5"></div></div>
+                        <div class="space-y-1"><div class="text-[10px] font-bold text-emerald-400 text-center">Quarks</div><div id="vtx-col-quarks" class="space-y-1.5 max-h-[220px] overflow-y-auto pr-0.5"></div></div>
+                        <div class="space-y-1"><div class="text-[10px] font-bold text-amber-400 text-center">Bosons</div><div id="vtx-col-bosons" class="space-y-1.5 max-h-[220px] overflow-y-auto pr-0.5"></div></div>
+                    </div>
+                    <div id="vtx-section-lists" class="border-t border-slate-800 pt-1.5 space-y-1">
+                        <div class="flex items-center justify-between"><span class="text-[10px] font-bold text-teal-400">Lists</span><button type="button" onclick="openAddListModal()" class="text-[9px] text-teal-400">+ New List</button></div>
+                        <div id="vtx-col-lists" class="grid grid-cols-3 gap-1.5 max-h-[110px] overflow-y-auto pr-0.5"></div>
+                    </div>
+                </div>
+                <div id="vtx-card-outgoing-container" class="col-span-3 bg-slate-950/80 border border-slate-800 rounded-2xl p-2.5 shadow-lg flex flex-col h-full">
+                    <div class="flex items-center justify-between pb-1.5 border-b border-slate-800">
+                        <h5 class="font-bold text-[11px] uppercase text-slate-200">Outgoing</h5>
+                        <button type="button" onclick="clearVertexList('outgoing')" class="text-[10px] text-slate-400 hover:text-rose-400">Clear</button>
+                    </div>
+                    <div id="vtx-list-outgoing" class="flex-1 flex flex-col gap-1.5 min-h-[260px] max-h-[340px] overflow-y-auto bg-slate-950 p-2 rounded-xl border border-slate-800/80 mt-2"></div>
+                </div>
+            </div>
+            <div class="space-y-1.5 bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                <span class="text-xs font-bold uppercase text-slate-300">Vertex Coupling Orders:</span>
+                <div id="vtx-coupling-container" class="grid grid-cols-2 sm:grid-cols-4 gap-2"></div>
+            </div>
+            <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+                <button type="button" onclick="closeVertexModal()" class="px-4 py-1.5 rounded-xl text-xs font-medium bg-slate-800 text-slate-300">Cancel</button>
+                <button type="button" onclick="saveCustomVertex()" class="px-5 py-1.5 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-500 text-white">Add Vertex</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom List Modal -->
+    <div id="modal-add-list" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 hidden overflow-y-auto">
+        <div class="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-5xl w-full p-3 sm:p-5 shadow-2xl space-y-3.5 my-auto max-h-[95vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                <h4 class="text-sm sm:text-base font-bold text-slate-100">Add Custom Particle List</h4>
+                <button type="button" onclick="closeAddListModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:text-rose-400"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                <div class="space-y-1">
+                    <label class="text-[11px] font-bold text-slate-400 uppercase">List Name</label>
+                    <input type="text" id="input-list-name" required placeholder="e.g. Light_Quarks" class="w-full bg-slate-900 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs font-mono-code text-teal-300">
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[11px] font-bold text-slate-400 uppercase">Description</label>
+                    <input type="text" id="input-list-desc" placeholder="e.g. {u, d, s}" class="w-full bg-slate-900 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-slate-200">
+                </div>
+            </div>
+            <div class="grid grid-cols-12 gap-2 sm:gap-3 items-stretch">
+                <div class="col-span-8 bg-slate-950/80 border border-slate-800 rounded-2xl p-2.5 shadow-lg flex flex-col h-full space-y-2">
+                    <span class="font-bold text-xs uppercase text-teal-300">Palette (Click to add to list)</span>
+                    <div class="grid grid-cols-3 gap-2 flex-1">
+                        <div class="space-y-1"><div class="text-[10px] font-bold text-indigo-400 text-center">Leptons</div><div id="list-col-leptons" class="space-y-1.5 max-h-[260px] overflow-y-auto pr-0.5"></div></div>
+                        <div class="space-y-1"><div class="text-[10px] font-bold text-emerald-400 text-center">Quarks</div><div id="list-col-quarks" class="space-y-1.5 max-h-[260px] overflow-y-auto pr-0.5"></div></div>
+                        <div class="space-y-1"><div class="text-[10px] font-bold text-amber-400 text-center">Bosons</div><div id="list-col-bosons" class="space-y-1.5 max-h-[260px] overflow-y-auto pr-0.5"></div></div>
+                    </div>
+                </div>
+                <div class="col-span-4 bg-slate-950/80 border border-teal-500/50 rounded-2xl p-2.5 shadow-lg flex flex-col h-full">
+                    <div class="flex items-center justify-between pb-1.5 border-b border-slate-800">
+                        <h5 class="font-bold text-[11px] uppercase text-slate-200">Elements</h5>
+                        <button type="button" onclick="clearListElements()" class="text-[10px] text-slate-400 hover:text-rose-400">Clear</button>
+                    </div>
+                    <div id="list-elements-container" class="flex-1 flex flex-col gap-1.5 min-h-[260px] max-h-[340px] overflow-y-auto bg-slate-950 p-2 rounded-xl border border-slate-800/80 mt-2"></div>
+                </div>
+            </div>
+            <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+                <button type="button" onclick="closeAddListModal()" class="px-4 py-1.5 rounded-xl text-xs font-medium bg-slate-800 text-slate-300">Cancel</button>
+                <button type="button" onclick="saveCustomList()" class="px-5 py-1.5 rounded-xl text-xs font-bold bg-teal-600 hover:bg-teal-500 text-white">Create List</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="particles.js"></script>
+    <script src="vertices.js"></script>
+    <script src="graph_engine.js"></script>
+    <script src="image_engine.js"></script>
+    <script src="main.js"></script>
+
+    <script>
+        const DEFAULT_COUPLINGS = ["QED", "QCD", "Electro-Weak", "Higgs"];
+        const state = {
+            targetMode: 'incoming',
+            incoming: [],
+            outgoing: [],
+            couplingList: ["QED", "QCD", "Electro-Weak", "Higgs"],
+            couplingOrders: { "QED": 2, "QCD": 0, "Electro-Weak": 0, "Higgs": 0 },
+            customVertices: [],
+            customLists: [],
+            maxLoops: 0,
+            includeDisconnected: false,
+            includeTadpoles: false,
+            disabledParticles: new Set(),
+            laws: { charge: true, lepton: true, baryon: true }
+        };
+
+        const listDraft = { elements: [] };
+        const vertexDraft = { target: 'incoming', incoming: [], outgoing: [], couplingOrders: {} };
+
+        window.getScatteringState = function() {
+            return {
+                incoming: [...state.incoming],
+                outgoing: [...state.outgoing],
+                couplingOrders: { ...state.couplingOrders },
+                couplingList: [...state.couplingList],
+                customVertices: [...state.customVertices],
+                customLists: [...state.customLists],
+                maxLoops: state.maxLoops,
+                includeDisconnected: state.includeDisconnected,
+                includeTadpoles: state.includeTadpoles,
+                disabledParticles: Array.from(state.disabledParticles),
+                laws: { ...state.laws }
+            };
+        };
+
+        function exportPreset() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "feynman_preset.json");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function importPreset() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = e => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = event => {
+                    try {
+                        const loaded = JSON.parse(event.target.result);
+                        if (loaded.incoming) state.incoming = loaded.incoming;
+                        if (loaded.outgoing) state.outgoing = loaded.outgoing;
+                        if (loaded.couplingOrders) state.couplingOrders = loaded.couplingOrders;
+                        if (loaded.maxLoops !== undefined) {
+                            state.maxLoops = loaded.maxLoops;
+                            document.getElementById('max-loops').value = loaded.maxLoops;
+                        }
+                        renderPalette();
+                        renderCouplingOrders();
+                        updateUI();
+                    } catch (err) {
+                        alert('Invalid preset JSON file');
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        function setTargetMode(mode) {
+            state.targetMode = mode;
+            document.getElementById('mode-incoming-btn').className = (mode === 'incoming')
+                ? 'flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 bg-indigo-600 text-white shadow-md'
+                : 'flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-900';
+            document.getElementById('mode-outgoing-btn').className = (mode === 'outgoing')
+                ? 'flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 bg-indigo-600 text-white shadow-md'
+                : 'flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-900';
+            document.getElementById('card-incoming-container').className = (mode === 'incoming')
+                ? 'col-span-3 bg-slate-900/90 border border-indigo-500/50 rounded-2xl p-2.5 sm:p-3 shadow-xl flex flex-col h-full transition-all ring-1 ring-indigo-500/30'
+                : 'col-span-3 bg-slate-900/90 border border-slate-800 rounded-2xl p-2.5 sm:p-3 shadow-xl flex flex-col h-full transition-all';
+            document.getElementById('card-outgoing-container').className = (mode === 'outgoing')
+                ? 'col-span-3 bg-slate-900/90 border border-indigo-500/50 rounded-2xl p-2.5 sm:p-3 shadow-xl flex flex-col h-full transition-all ring-1 ring-indigo-500/30'
+                : 'col-span-3 bg-slate-900/90 border border-slate-800 rounded-2xl p-2.5 sm:p-3 shadow-xl flex flex-col h-full transition-all';
+        }
+
+        function addParticleById(id, symbol, category, charge, lepton, baryon, flavor, isAnti) {
+            if (state.disabledParticles.has(id)) return;
+            const item = {
+                id, symbol, category,
+                charge: parseFloat(charge),
+                lepton: parseFloat(lepton || 0),
+                baryon: parseFloat(baryon || 0),
+                flavor, isAnti: isAnti === 'true' || isAnti === true,
+                uid: 'p_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4)
+            };
+            if (state.targetMode === 'incoming') state.incoming.push(item);
+            else state.outgoing.push(item);
+            updateUI();
+        }
+
+        function removeParticle(uid, mode) {
+            if (mode === 'incoming') state.incoming = state.incoming.filter(p => p.uid !== uid);
+            else state.outgoing = state.outgoing.filter(p => p.uid !== uid);
+            updateUI();
+        }
+
+        function clearList(mode) {
+            if (mode === 'incoming') state.incoming = [];
+            else state.outgoing = [];
+            updateUI();
+        }
+
+        function toggleDisableParticle(id) {
+            if (state.disabledParticles.has(id)) {
+                state.disabledParticles.delete(id);
+            } else {
+                state.disabledParticles.add(id);
+                state.incoming = state.incoming.filter(p => p.id !== id);
+                state.outgoing = state.outgoing.filter(p => p.id !== id);
+            }
+            renderPalette();
+            updateUI();
+        }
+
+        function toggleLaw(lawName) {
+            state.laws[lawName] = !state.laws[lawName];
+            const btn = document.getElementById(`toggle-law-${lawName}`);
+            if (btn) {
+                btn.className = state.laws[lawName]
+                    ? 'law-toggle-btn text-[10px] font-semibold uppercase px-2 py-0.5 rounded-md transition-all bg-emerald-950/70 text-emerald-300 border border-emerald-700/50 flex items-center gap-1 shadow-sm shrink-0'
+                    : 'law-toggle-btn text-[10px] font-semibold uppercase px-2 py-0.5 rounded-md transition-all bg-slate-900 text-slate-400 border border-slate-700 flex items-center gap-1 shadow-sm shrink-0';
+                btn.innerHTML = state.laws[lawName]
+                    ? `<i class="fa-solid fa-toggle-on text-emerald-400 text-[11px]"></i><span>Active</span>`
+                    : `<i class="fa-solid fa-toggle-off text-slate-500 text-[11px]"></i><span>Ignored</span>`;
+            }
+            checkConservation();
+        }
+
+        function adjustLoops(delta) {
+            state.maxLoops = Math.max(0, state.maxLoops + delta);
+            document.getElementById('max-loops').value = state.maxLoops;
+        }
+
+        function onLoopsChange(val) {
+            state.maxLoops = Math.max(0, parseInt(val, 10) || 0);
+        }
+
+        function onTopologyRuleChange() {
+            state.includeDisconnected = document.getElementById('chk-disconnected').checked;
+            state.includeTadpoles = document.getElementById('chk-tadpoles').checked;
+        }
+
+        function adjustCoupling(name, delta) {
+            state.couplingOrders[name] = Math.max(0, (state.couplingOrders[name] || 0) + delta);
+            renderCouplingOrders();
+        }
+
+        function onCouplingChange(name, val) {
+            state.couplingOrders[name] = Math.max(0, parseInt(val, 10) || 0);
+        }
+
+        function resetAllScattering() {
+            state.incoming = [];
+            state.outgoing = [];
+            state.maxLoops = 0;
+            document.getElementById('max-loops').value = 0;
+            document.getElementById('chk-disconnected').checked = false;
+            document.getElementById('chk-tadpoles').checked = false;
+            state.disabledParticles.clear();
+            state.laws = { charge: true, lepton: true, baryon: true };
+            ['charge', 'lepton', 'baryon'].forEach(l => {
+                const btn = document.getElementById(`toggle-law-${l}`);
+                if (btn) {
+                    btn.className = 'law-toggle-btn text-[10px] font-semibold uppercase px-2 py-0.5 rounded-md transition-all bg-emerald-950/70 text-emerald-300 border border-emerald-700/50 flex items-center gap-1 shadow-sm shrink-0';
+                    btn.innerHTML = `<i class="fa-solid fa-toggle-on text-emerald-400 text-[11px]"></i><span>Active</span>`;
+                }
+            });
+            renderPalette();
+            updateUI();
+        }
+
+        function renderPalette() {
+            const leptons = [
+                { id: 'e-', symbol: 'e⁻', antiId: 'e+', antiSymbol: 'e⁺', cat: 'lepton', q: -1, l: 1, b: 0, f: 'e' },
+                { id: 'mu-', symbol: 'μ⁻', antiId: 'mu+', antiSymbol: 'μ⁺', cat: 'lepton', q: -1, l: 1, b: 0, f: 'mu' },
+                { id: 'tau-', symbol: 'τ⁻', antiId: 'tau+', antiSymbol: 'τ⁺', cat: 'lepton', q: -1, l: 1, b: 0, f: 'tau' },
+                { id: 'nu_e', symbol: 'νₑ', antiId: 'anti_nu_e', antiSymbol: 'ν̄ₑ', cat: 'lepton', q: 0, l: 1, b: 0, f: 'nue' },
+                { id: 'nu_mu', symbol: 'ν_μ', antiId: 'anti_nu_mu', antiSymbol: 'ν̄_μ', cat: 'lepton', q: 0, l: 1, b: 0, f: 'numu' },
+                { id: 'nu_tau', symbol: 'ν_τ', antiId: 'anti_nu_tau', antiSymbol: 'ν̄_τ', cat: 'lepton', q: 0, l: 1, b: 0, f: 'nutau' }
+            ];
+
+            const quarks = [
+                { id: 'u', symbol: 'u', antiId: 'u_bar', antiSymbol: 'ū', cat: 'quark', q: 0.6667, l: 0, b: 0.3333, f: 'u' },
+                { id: 'd', symbol: 'd', antiId: 'd_bar', antiSymbol: 'd̄', cat: 'quark', q: -0.3333, l: 0, b: 0.3333, f: 'd' },
+                { id: 'c', symbol: 'c', antiId: 'c_bar', antiSymbol: 'c̄', cat: 'quark', q: 0.6667, l: 0, b: 0.3333, f: 'c' },
+                { id: 's', symbol: 's', antiId: 's_bar', antiSymbol: 's̄', cat: 'quark', q: -0.3333, l: 0, b: 0.3333, f: 's' },
+                { id: 't', symbol: 't', antiId: 't_bar', antiSymbol: 't̄', cat: 'quark', q: 0.6667, l: 0, b: 0.3333, f: 't' },
+                { id: 'b', symbol: 'b', antiId: 'b_bar', antiSymbol: 'b̄', cat: 'quark', q: -0.3333, l: 0, b: 0.3333, f: 'b' }
+            ];
+
+            const bosons = [
+                { id: 'gamma', symbol: 'γ', cat: 'boson', q: 0, l: 0, b: 0, f: 'gamma', single: true },
+                { id: 'W-', symbol: 'W⁻', antiId: 'W+', antiSymbol: 'W⁺', cat: 'boson', q: -1, l: 0, b: 0, f: 'w' },
+                { id: 'gluon', symbol: 'g', cat: 'boson', q: 0, l: 0, b: 0, f: 'gluon', single: true },
+                { id: 'Z0', symbol: 'Z⁰', cat: 'boson', q: 0, l: 0, b: 0, f: 'z', single: true },
+                { id: 'H0', symbol: 'H⁰', cat: 'boson', q: 0, l: 0, b: 0, f: 'h', single: true }
+            ];
+
+            function renderPairGroup(p, themeColor) {
+                const dis1 = state.disabledParticles.has(p.id);
+                const dis2 = p.antiId ? state.disabledParticles.has(p.antiId) : false;
+
+                if (p.single) {
+                    return `
+                    <div class="w-full max-w-[100px] mx-auto border border-slate-700/80 rounded-xl overflow-hidden bg-slate-950 shadow-sm flex flex-col">
+                        <button type="button" onclick="addParticleById('${p.id}', '${p.symbol}', '${p.cat}', ${p.q}, ${p.l}, ${p.b}, '${p.f}', false)" ${dis1 ? 'disabled' : ''}
+                            class="w-full aspect-[2/1] flex items-center justify-center font-mono-code text-sm font-bold text-slate-100 hover:bg-${themeColor}-600 hover:text-white transition-colors ${dis1 ? 'opacity-25 pointer-events-none line-through' : ''}">
+                            ${p.symbol}
+                        </button>
+                        <div class="w-full border-t border-slate-800/80 bg-slate-900/60">
+                            <button type="button" onclick="toggleDisableParticle('${p.id}')"
+                                class="w-full py-0.5 text-[9px] font-semibold text-slate-400 hover:text-rose-400 flex items-center justify-center gap-0.5">
+                                <i class="fa-solid ${dis1 ? 'fa-check' : 'fa-ban'} text-[8px]"></i><span>${dis1 ? 'Enable' : 'Disable'}</span>
+                            </button>
+                        </div>
+                    </div>`;
+                }
+
+                return `
+                <div class="w-full max-w-[100px] mx-auto border border-slate-700/80 rounded-xl overflow-hidden bg-slate-950 shadow-sm flex flex-col">
+                    <div class="flex items-center w-full aspect-[2/1]">
+                        <button type="button" onclick="addParticleById('${p.id}', '${p.symbol}', '${p.cat}', ${p.q}, ${p.l}, ${p.b}, '${p.f}', false)" ${dis1 ? 'disabled' : ''}
+                            class="w-1/2 h-full aspect-square flex items-center justify-center font-mono-code text-sm font-bold text-slate-100 hover:bg-${themeColor}-600 hover:text-white transition-colors border-r border-slate-800 ${dis1 ? 'opacity-25 pointer-events-none line-through' : ''}">
+                            ${p.symbol}
+                        </button>
+                        <button type="button" onclick="addParticleById('${p.antiId}', '${p.antiSymbol}', '${p.cat}', ${-p.q}, ${-p.l}, ${-p.b}, '${p.f}', true)" ${dis2 ? 'disabled' : ''}
+                            class="w-1/2 h-full aspect-square flex items-center justify-center font-mono-code text-sm font-bold text-slate-100 hover:bg-${themeColor}-600 hover:text-white transition-colors ${dis2 ? 'opacity-25 pointer-events-none line-through' : ''}">
+                            ${p.antiSymbol}
+                        </button>
+                    </div>
+                    <div class="flex items-center w-full border-t border-slate-800/80 bg-slate-900/60">
+                        <button type="button" onclick="toggleDisableParticle('${p.id}')"
+                            class="w-1/2 py-0.5 text-[9px] font-semibold text-slate-400 hover:text-rose-400 border-r border-slate-800/80 flex items-center justify-center gap-0.5">
+                            <i class="fa-solid ${dis1 ? 'fa-check' : 'fa-ban'} text-[8px]"></i><span>${dis1 ? 'Enable' : 'Disable'}</span>
+                        </button>
+                        <button type="button" onclick="toggleDisableParticle('${p.antiId}')"
+                            class="w-1/2 py-0.5 text-[9px] font-semibold text-slate-400 hover:text-rose-400 flex items-center justify-center gap-0.5">
+                            <i class="fa-solid ${dis2 ? 'fa-check' : 'fa-ban'} text-[8px]"></i><span>${dis2 ? 'Enable' : 'Disable'}</span>
+                        </button>
+                    </div>
+                </div>`;
+            }
+
+            document.getElementById('col-leptons').innerHTML = leptons.map(p => renderPairGroup(p, 'indigo')).join('');
+            document.getElementById('col-quarks').innerHTML = quarks.map(p => renderPairGroup(p, 'emerald')).join('');
+            document.getElementById('col-bosons').innerHTML = bosons.map(p => renderPairGroup(p, 'amber')).join('');
+        }
+
+        function renderCouplingOrders() {
+            const container = document.getElementById('coupling-orders-container');
+            container.innerHTML = state.couplingList.map(name => {
+                const val = state.couplingOrders[name] || 0;
+                const isDefault = DEFAULT_COUPLINGS.includes(name);
+                return `
+                <div class="bg-slate-950 p-2 sm:p-2.5 rounded-xl border border-slate-800 flex flex-col items-center justify-between text-center shadow-inner">
+                    <div class="flex items-center justify-between w-full px-0.5">
+                        <span class="text-xs sm:text-sm font-bold text-slate-200 truncate pr-1">${name}</span>
+                        ${!isDefault ? `<button type="button" onclick="removeCouplingConstant('${name}')" class="text-[10px] text-slate-500 hover:text-rose-400"><i class="fa-solid fa-xmark"></i></button>` : '<span></span>'}
+                    </div>
+                    <div class="flex items-center gap-1.5 mt-1.5">
+                        <button type="button" onclick="adjustCoupling('${name}', -1)" class="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs sm:text-sm font-bold flex items-center justify-center active:scale-95">-</button>
+                        <input type="number" min="0" value="${val}" onchange="onCouplingChange('${name}', this.value)"
+                            class="w-12 sm:w-16 text-center bg-transparent text-sm sm:text-base font-mono-code font-bold text-amber-300 focus:outline-none">
+                        <button type="button" onclick="adjustCoupling('${name}', 1)" class="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs sm:text-sm font-bold flex items-center justify-center active:scale-95">+</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function checkConservation() {
+            let inQ = 0, outQ = 0, inL = 0, outL = 0, inB = 0, outB = 0;
+            state.incoming.forEach(p => { inQ += p.charge; inL += (p.lepton || 0); inB += (p.baryon || 0); });
+            state.outgoing.forEach(p => { outQ += p.charge; outL += (p.lepton || 0); outB += (p.baryon || 0); });
+
+            const deltaQ = outQ - inQ, deltaL = outL - inL, deltaB = outB - inB;
+            const qPass = !state.laws.charge || Math.abs(deltaQ) < 0.001;
+            const lPass = !state.laws.lepton || Math.abs(deltaL) < 0.001;
+            const bPass = !state.laws.baryon || Math.abs(deltaB) < 0.001;
+            state.isConserved = qPass && lPass && bPass;
+
+            document.getElementById('val-charge').textContent = !state.laws.charge ? `ΔQ = ${deltaQ.toFixed(2)} (Ignored)` : (Math.abs(deltaQ) < 0.001 ? 'ΔQ = 0' : `ΔQ = ${deltaQ > 0 ? '+' : ''}${deltaQ.toFixed(2)}`);
+            document.getElementById('val-lepton').textContent = !state.laws.lepton ? `ΔL = ${deltaL.toFixed(2)} (Ignored)` : (Math.abs(deltaL) < 0.001 ? 'ΔL = 0' : `ΔL = ${deltaL > 0 ? '+' : ''}${deltaL.toFixed(2)}`);
+            document.getElementById('val-baryon').textContent = !state.laws.baryon ? `ΔB = ${deltaB.toFixed(2)} (Ignored)` : (Math.abs(deltaB) < 0.001 ? 'ΔB = 0' : `ΔB = ${deltaB > 0 ? '+' : ''}${deltaB.toFixed(2)}`);
+
+            const canGen = state.isConserved && state.incoming.length > 0 && state.outgoing.length > 0;
+            const btnGen = document.getElementById('btn-generate');
+            btnGen.disabled = !canGen;
+            btnGen.className = canGen
+                ? 'px-5 py-2.5 rounded-xl font-semibold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 shadow-lg bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer active:scale-95 shadow-indigo-600/30'
+                : 'px-5 py-2.5 rounded-xl font-semibold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 shadow-md bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700/60';
+
+            const badge = document.getElementById('conservation-badge');
+            badge.textContent = state.incoming.length === 0 && state.outgoing.length === 0 ? 'Empty State' : (state.isConserved ? 'Conserved' : 'Violated');
+            badge.className = state.isConserved ? 'text-xs font-semibold px-3 py-1 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-700/60 font-mono-code' : 'text-xs font-semibold px-3 py-1 rounded-full bg-rose-950 text-rose-300 border border-rose-700/60 font-mono-code';
+        }
+
+        function updateUI() {
+            document.getElementById('badge-incoming-count').textContent = state.incoming.length;
+            document.getElementById('badge-outgoing-count').textContent = state.outgoing.length;
+
+            function renderRows(list, mode) {
+                if (list.length === 0) return '<div class="flex-1 flex flex-col items-center justify-center text-slate-600 py-8 text-center"><span class="text-xs">No particles added</span></div>';
+                return list.map((p, idx) => `
+                <div class="flex items-center justify-between p-2 rounded-xl bg-slate-900 border border-slate-800 shadow-sm">
+                    <div class="flex items-center gap-2 truncate">
+                        <span class="w-7 h-7 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-center font-mono-code font-bold text-sm text-slate-100 shrink-0">${p.symbol}</span>
+                        <div class="flex flex-col truncate">
+                            <span class="text-xs font-semibold text-slate-200">#${idx + 1} (${p.category})</span>
+                            <span class="text-[10px] text-slate-500 font-mono-code">Q:${p.charge}</span>
+                        </div>
+                    </div>
+                    <button type="button" onclick="removeParticle('${p.uid}', '${mode}')" class="w-6 h-6 rounded-lg text-slate-500 hover:text-rose-400 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+                </div>`).join('');
+            }
+
+            document.getElementById('list-incoming').innerHTML = renderRows(state.incoming, 'incoming');
+            document.getElementById('list-outgoing').innerHTML = renderRows(state.outgoing, 'outgoing');
+
+            const inStr = state.incoming.map(p => p.symbol).join(' + ') || '(None)';
+            const outStr = state.outgoing.map(p => p.symbol).join(' + ') || '(None)';
+            document.getElementById('reaction-formula').innerHTML = `<span>${inStr}</span> <span class="text-slate-500 mx-2">→</span> <span>${outStr}</span>`;
+
+            checkConservation();
+        }
+
+        function openCustomParticleModal() { document.getElementById('modal-custom-particle').classList.remove('hidden'); }
+        function closeCustomParticleModal() { document.getElementById('modal-custom-particle').classList.add('hidden'); }
+        function updatePairTypeUI() {
+            const isPair = document.querySelector('input[name="custom-pair-type"]:checked').value === 'pair';
+            document.getElementById('wrapper-anti-symbol').className = isPair ? 'space-y-1' : 'space-y-1 hidden';
+        }
+        function handleCustomParticleSubmit(e) {
+            e.preventDefault();
+            const isPair = document.querySelector('input[name="custom-pair-type"]:checked').value === 'pair';
+            const sym = document.getElementById('cust-symbol').value.trim();
+            const antiSym = document.getElementById('cust-anti-symbol').value.trim() || (sym + '̄');
+            const id = document.getElementById('cust-id').value.trim();
+            const cat = document.getElementById('cust-category').value;
+            const q = parseFloat(document.getElementById('cust-charge').value) || 0;
+            const l = parseFloat(document.getElementById('cust-lepton').value) || 0;
+            const b = parseFloat(document.getElementById('cust-baryon').value) || 0;
+
+            const pDef = { isPair, symbol: sym, antiSymbol: antiSym, id, category: cat, charge: q, lepton: l, baryon: b };
+            state.customParticles.push(pDef);
+            Particles.registerCustom(pDef);
+            closeCustomParticleModal();
+            renderPalette();
+        }
+
+        function openRemoveParticleModal() { document.getElementById('modal-remove-particle').classList.remove('hidden'); }
+        function closeRemoveParticleModal() { document.getElementById('modal-remove-particle').classList.add('hidden'); }
+        function removeAllCustomParticles() { state.customParticles = []; closeRemoveParticleModal(); renderPalette(); }
+
+        function openAddCouplingModal() { document.getElementById('modal-add-coupling').classList.remove('hidden'); }
+        function closeAddCouplingModal() { document.getElementById('modal-add-coupling').classList.add('hidden'); }
+        function handleAddCouplingSubmit(e) {
+            e.preventDefault();
+            const name = document.getElementById('input-coupling-name').value.trim();
+            const val = parseInt(document.getElementById('input-coupling-initial').value, 10) || 0;
+            if (name && !state.couplingList.includes(name)) {
+                state.couplingList.push(name);
+                state.couplingOrders[name] = val;
+                renderCouplingOrders();
+            }
+            closeAddCouplingModal();
+        }
+
+        function openRemoveCouplingModal() { document.getElementById('modal-remove-coupling').classList.remove('hidden'); }
+        function closeRemoveCouplingModal() { document.getElementById('modal-remove-coupling').classList.add('hidden'); }
+        function removeCouplingConstant(name) {
+            if (DEFAULT_COUPLINGS.includes(name)) return;
+            state.couplingList = state.couplingList.filter(c => c !== name);
+            delete state.couplingOrders[name];
+            renderCouplingOrders();
+        }
+
+        function openVertexModal() {
+            vertexDraft.incoming = []; vertexDraft.outgoing = []; vertexDraft.couplingOrders = {};
+            state.couplingList.forEach(c => { vertexDraft.couplingOrders[c] = (c === 'QED' ? 1 : 0); });
+            document.getElementById('vertex-input-id').value = 'vertex_' + (state.customVertices.length + 1);
+            document.getElementById('modal-custom-vertex').classList.remove('hidden');
+        }
+        function closeVertexModal() { document.getElementById('modal-custom-vertex').classList.add('hidden'); }
+        function setVertexTargetMode(mode) { vertexDraft.target = mode; }
+        function clearVertexList(mode) { if (mode === 'incoming') vertexDraft.incoming = []; else vertexDraft.outgoing = []; }
+        function copyReactionToVertex() { vertexDraft.incoming = [...state.incoming]; vertexDraft.outgoing = [...state.outgoing]; }
+        function saveCustomVertex() {
+            const id = document.getElementById('vertex-input-id').value.trim() || ('vertex_' + Date.now());
+            state.customVertices.push({ id, incoming: vertexDraft.incoming, outgoing: vertexDraft.outgoing, couplingOrders: vertexDraft.couplingOrders });
+            closeVertexModal();
+        }
+        function openRemoveVertexModal() { document.getElementById('modal-remove-vertex').classList.remove('hidden'); }
+        function closeRemoveVertexModal() { document.getElementById('modal-remove-vertex').classList.add('hidden'); }
+        function removeAllVertices() { state.customVertices = []; closeRemoveVertexModal(); }
+
+        function openAddListModal() { document.getElementById('modal-add-list').classList.remove('hidden'); }
+        function closeAddListModal() { document.getElementById('modal-add-list').classList.add('hidden'); }
+        function clearListElements() { listDraft.elements = []; }
+        function saveCustomList() {
+            const name = document.getElementById('input-list-name').value.trim();
+            if (name) { state.customLists.push({ name, particles: [...listDraft.elements] }); }
+            closeAddListModal();
+        }
+        function openRemoveListModal() { document.getElementById('modal-remove-list').classList.remove('hidden'); }
+        function closeRemoveListModal() { document.getElementById('modal-remove-list').classList.add('hidden'); }
+        function removeAllLists() { state.customLists = []; closeRemoveListModal(); }
+
+        renderPalette();
+        renderCouplingOrders();
+        updateUI();
+    </script>
+</body>
+</html>
