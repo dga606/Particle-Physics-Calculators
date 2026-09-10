@@ -45,6 +45,11 @@
         config.customParticles.forEach(pDef => global.Particles.registerCustom(pDef));
       }
 
+      // Keep the exact serializable scattering configuration supplied to output.html
+      // so Download JSON can reproduce the setup that is passed to inspect.html.
+      window.__OUTPUT_SCATTERING_CONFIG = JSON.parse(JSON.stringify(config));
+      window.__OUTPUT_DIAGRAMS = [];
+
       // Shared, output-page-level data used by every diagram editor tab.
       // IMPORTANT: never carry Particle objects into this data. Keep only plain
       // serializable particle identity and the custom-definition information.
@@ -120,12 +125,13 @@
       };
 
       const maxTotalOrder = Object.values(config.couplingOrders || {}).reduce((a, b) => a + (parseInt(b, 10) || 0), 0) || 12;
+      const minTotalOrder = Math.max(0, parseInt(config.minTotalOrder, 10) || 0);
 
       this.abortToken = { aborted: false };
       let totalCount = 0;
 
-      // Loop over exactOrder from 0 to maxTotalOrder
-      for (let exactOrder = 0; exactOrder <= maxTotalOrder; exactOrder++) {
+      // Loop over exactOrder from minTotalOrder to maxTotalOrder
+      for (let exactOrder = minTotalOrder; exactOrder <= maxTotalOrder; exactOrder++) {
         if (this.abortToken.aborted) break;
 
         if (window.OutputUI) {

@@ -696,6 +696,10 @@
     const diagramData = extractDiagramData(diag);
     const serializedJson = JSON.stringify(diagramData);
 
+    // Keep every generated diagram in generation order for JSON export.
+    window.__OUTPUT_DIAGRAMS = window.__OUTPUT_DIAGRAMS || [];
+    window.__OUTPUT_DIAGRAMS.push(diagramData);
+
     // Format individual coupling orders (e.g. "QED: 2, EW: 1")
     const couplingEntries = Object.entries(diag.order || {}).filter(([_, val]) => (val || 0) > 0);
     const couplingBadges = couplingEntries.length > 0

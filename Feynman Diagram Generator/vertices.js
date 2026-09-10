@@ -130,6 +130,10 @@
           else currentOut.push(p.anti || p);
         }
 
+        // Every physical interaction vertex must have at least one incoming
+        // and one outgoing leg. Reject the empty-side crossing cases (0->N/N->0).
+        if (currentIn.length === 0 || currentOut.length === 0) continue;
+
         if ([...currentIn, ...currentOut].some(p => isParticleBlacklisted(p, blacklist))) continue;
 
         const sig = getVertexSignature(currentIn, currentOut);

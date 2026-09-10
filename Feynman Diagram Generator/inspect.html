@@ -258,8 +258,8 @@
     const height=displayedBottom-editorBounds.top;
     svg.setAttribute('viewBox', editorBounds.left+' '+editorBounds.top+' '+width+' '+height);
     svg.removeAttribute('class');
-    svg.style.width=width+'px';
-    svg.style.height=height+'px';
+    svg.style.width='87.5%';
+    svg.style.height='auto';
     svg.style.maxHeight='none';
     svg.style.maxWidth='none';
     svg.style.display='block';
@@ -393,6 +393,9 @@
       svg.setAttribute('width',String(Math.max(1,Math.ceil(vb[2]))));
       svg.setAttribute('height',String(Math.max(1,Math.ceil(vb[3]))));
     }
+    const metadata=document.createElementNS('http://www.w3.org/2000/svg','metadata');
+    metadata.textContent='dga606';
+    svg.insertBefore(metadata,svg.firstChild);
     const bg=document.createElementNS('http://www.w3.org/2000/svg','rect');
     bg.setAttribute('x',String(vb[0])); bg.setAttribute('y',String(vb[1]));
     bg.setAttribute('width',String(vb[2])); bg.setAttribute('height',String(vb[3])); bg.setAttribute('fill','#fff');
@@ -403,6 +406,39 @@
     try { const blob=new Blob([exportSvgText()],{type:'image/svg+xml;charset=utf-8'}), url=URL.createObjectURL(blob), a=document.createElement('a'); a.href=url;a.download='feynman-diagram.svg';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},1000); }
     catch(err){alert('Unable to export SVG: '+(err.message||err));}
   });
+  function crc32(bytes) {
+    let crc = 0xFFFFFFFF;
+    for (let i = 0; i < bytes.length; i++) {
+      crc ^= bytes[i];
+      for (let j = 0; j < 8; j++) crc = (crc >>> 1) ^ (0xEDB88320 & -(crc & 1));
+    }
+    return (crc ^ 0xFFFFFFFF) >>> 0;
+  }
+
+  function pngWithExportInfo(pngBlob) {
+    return pngBlob.arrayBuffer().then(function(buf) {
+      const bytes = new Uint8Array(buf);
+      const keyword = new TextEncoder().encode('dga606');
+      const value = new TextEncoder().encode('dga606');
+      const data = new Uint8Array(keyword.length + 1 + value.length);
+      data.set(keyword, 0);
+      data[keyword.length] = 0;
+      data.set(value, keyword.length + 1);
+      const type = new TextEncoder().encode('tEXt');
+      const chunk = new Uint8Array(12 + data.length);
+      const view = new DataView(chunk.buffer);
+      view.setUint32(0, data.length);
+      chunk.set(type, 4);
+      chunk.set(data, 8);
+      view.setUint32(8 + data.length, crc32(new Uint8Array(chunk.buffer, 4, 4 + data.length)));
+      const out = new Uint8Array(bytes.length + chunk.length);
+      out.set(bytes.slice(0, 8), 0);
+      out.set(chunk, 8);
+      out.set(bytes.slice(8), 8 + chunk.length);
+      return new Blob([out], {type:'image/png'});
+    });
+  }
+
   document.getElementById('btn-png').addEventListener('click',function(){
     try {
       const svgText=exportSvgText(), blob=new Blob([svgText],{type:'image/svg+xml;charset=utf-8'}), url=URL.createObjectURL(blob), img=new Image();
@@ -410,7 +446,15 @@
         const vb=(buildSvg().getAttribute('viewBox')||'0 0 300 200').split(/\s+/).map(Number), scale=Math.max(1,Math.min(3,window.devicePixelRatio||1));
         const canvas=document.createElement('canvas'); canvas.width=Math.max(1,Math.ceil(vb[2]*scale));canvas.height=Math.max(1,Math.ceil(vb[3]*scale));
         const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(img,0,0,canvas.width,canvas.height);
-        canvas.toBlob(function(png){URL.revokeObjectURL(url);if(!png)return;const pngUrl=URL.createObjectURL(png),a=document.createElement('a');a.href=pngUrl;a.download='feynman-diagram.png';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(pngUrl);},1000);},'image/png');
+        canvas.toBlob(function(png){
+          URL.revokeObjectURL(url);
+          if(!png)return;
+          pngWithExportInfo(png).then(function(pngWithInfo){
+            const pngUrl=URL.createObjectURL(pngWithInfo),a=document.createElement('a');
+            a.href=pngUrl;a.download='feynman-diagram.png';document.body.appendChild(a);a.click();a.remove();
+            setTimeout(function(){URL.revokeObjectURL(pngUrl);},1000);
+          });
+        },'image/png');
       };
       img.onerror=function(){URL.revokeObjectURL(url);alert('Unable to export PNG.');}; img.src=url;
     } catch(err){alert('Unable to export PNG: '+(err.message||err));}

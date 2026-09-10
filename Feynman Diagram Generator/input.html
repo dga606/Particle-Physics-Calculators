@@ -250,6 +250,15 @@
                 </div>
             </div>
 
+            <div class="flex items-center justify-between p-3 sm:p-4 rounded-xl bg-slate-950 border border-slate-800">
+                <span class="text-sm sm:text-base font-bold text-slate-100">Minimum Total Order of Coupling Constants</span>
+                <div class="flex items-center gap-2 bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-800 shadow-inner">
+                    <button type="button" onclick="adjustMinTotalOrder(-1)" class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-bold flex items-center justify-center active:scale-95">-</button>
+                    <input type="number" id="min-total-order" min="0" value="0" onchange="onMinTotalOrderChange(this.value)" class="w-12 sm:w-16 text-center bg-transparent text-sm sm:text-base font-mono-code font-bold text-amber-300 focus:outline-none">
+                    <button type="button" onclick="adjustMinTotalOrder(1)" class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-bold flex items-center justify-center active:scale-95">+</button>
+                </div>
+            </div>
+
             <div class="space-y-2 pt-1">
                 <span class="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-200 block">Topological Rules:</span>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -512,6 +521,7 @@
             customVertices: [],
             customLists: [],
             maxLoops: 0,
+            minTotalOrder: 0,
             includeDisconnected: false,
             includeTadpoles: false,
             disabledParticles: new Set(),
@@ -531,6 +541,7 @@
                 customVertices: [...state.customVertices],
                 customLists: [...state.customLists],
                 maxLoops: state.maxLoops,
+                minTotalOrder: state.minTotalOrder,
                 includeDisconnected: state.includeDisconnected,
                 includeTadpoles: state.includeTadpoles,
                 disabledParticles: Array.from(state.disabledParticles),
@@ -563,8 +574,12 @@
                         if (loaded.outgoing) state.outgoing = loaded.outgoing;
                         if (loaded.couplingOrders) state.couplingOrders = loaded.couplingOrders;
                         if (loaded.maxLoops !== undefined) {
-                            state.maxLoops = loaded.maxLoops;
-                            document.getElementById('max-loops').value = loaded.maxLoops;
+                            state.maxLoops = Math.max(0, parseInt(loaded.maxLoops, 10) || 0);
+                            document.getElementById('max-loops').value = state.maxLoops;
+                        }
+                        if (loaded.minTotalOrder !== undefined) {
+                            state.minTotalOrder = Math.max(0, parseInt(loaded.minTotalOrder, 10) || 0);
+                            document.getElementById('min-total-order').value = state.minTotalOrder;
                         }
                         renderPalette();
                         renderCouplingOrders();
@@ -656,6 +671,15 @@
             state.maxLoops = Math.max(0, parseInt(val, 10) || 0);
         }
 
+        function adjustMinTotalOrder(delta) {
+            state.minTotalOrder = Math.max(0, state.minTotalOrder + delta);
+            document.getElementById('min-total-order').value = state.minTotalOrder;
+        }
+
+        function onMinTotalOrderChange(val) {
+            state.minTotalOrder = Math.max(0, parseInt(val, 10) || 0);
+        }
+
         function onTopologyRuleChange() {
             state.includeDisconnected = document.getElementById('chk-disconnected').checked;
             state.includeTadpoles = document.getElementById('chk-tadpoles').checked;
@@ -674,7 +698,9 @@
             state.incoming = [];
             state.outgoing = [];
             state.maxLoops = 0;
+            state.minTotalOrder = 0;
             document.getElementById('max-loops').value = 0;
+            document.getElementById('min-total-order').value = 0;
             document.getElementById('chk-disconnected').checked = false;
             document.getElementById('chk-tadpoles').checked = false;
             state.disabledParticles.clear();
