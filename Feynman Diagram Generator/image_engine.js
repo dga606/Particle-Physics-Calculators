@@ -453,7 +453,14 @@
     return `${p1x.toFixed(2)},${p1y.toFixed(2)} ${p2x.toFixed(2)},${p2y.toFixed(2)} ${p3x.toFixed(2)},${p3y.toFixed(2)}`;
   }
 
-  function renderDiagramSVG(diagram) {
+  function renderDiagramSVG(diagram, options = {}) {
+    const monochrome = !!options.monochrome;
+    const showLabelBoxes = options.showLabelBoxes !== false;
+    const lineColor = monochrome ? '#000' : null;
+    const labelTextColor = monochrome ? '#000' : '#cbd5e1';
+    const vertexFill = monochrome ? '#000' : '#f43f5e';
+    const boundaryInFill = monochrome ? '#000' : '#10b981';
+    const boundaryOutFill = monochrome ? '#000' : '#06b6d4';
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     const allNodes = [...diagram.inStates, ...diagram.vertices, ...diagram.outStates];
 
@@ -505,18 +512,18 @@
       let edgeSvg = '';
       if (isPhoton) {
         const pathData = generatePhotonPath(a, ctrl, b, sagitta);
-        edgeSvg = `<path d="${pathData}" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
+        edgeSvg = `<path d="${pathData}" fill="none" stroke="${lineColor || "#fbbf24"}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
       } else if (isGluon) {
         const pathData = generateGluonPath(a, ctrl, b, sagitta);
-        edgeSvg = `<path d="${pathData}" fill="none" stroke="#34d399" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
+        edgeSvg = `<path d="${pathData}" fill="none" stroke="${lineColor || "#34d399"}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
       } else if (isWeak) {
         const pathData = generateZigZagPath(a, ctrl, b, sagitta);
-        edgeSvg = `<path d="${pathData}" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
+        edgeSvg = `<path d="${pathData}" fill="none" stroke="${lineColor || "#f59e0b"}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
       } else if (isHiggs) {
         if (!sagitta) {
-          edgeSvg = `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="#c084fc" stroke-width="2" stroke-dasharray="6,4" stroke-linecap="round"/>`;
+          edgeSvg = `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${lineColor || "#c084fc"}" stroke-width="2" stroke-dasharray="6,4" stroke-linecap="round"/>`;
         } else {
-          edgeSvg = `<path d="M ${a.x} ${a.y} Q ${ctrl.x} ${ctrl.y} ${b.x} ${b.y}" fill="none" stroke="#c084fc" stroke-width="2" stroke-dasharray="6,4" stroke-linecap="round"/>`;
+          edgeSvg = `<path d="M ${a.x} ${a.y} Q ${ctrl.x} ${ctrl.y} ${b.x} ${b.y}" fill="none" stroke="${lineColor || "#c084fc"}" stroke-width="2" stroke-dasharray="6,4" stroke-linecap="round"/>`;
         }
       } else {
         // Fermion (Solid line or arc with tangent arrow)
@@ -528,13 +535,13 @@
         let arrowSvg = '';
         if (!line.particle.isSelfConjugate) {
           const arrowPoints = getFermionArrowPolygon(midPt.x, midPt.y, angle, isAnti);
-          arrowSvg = `<polygon points="${arrowPoints}" fill="#60a5fa" />`;
+          arrowSvg = `<polygon points="${arrowPoints}" fill="${lineColor || "#60a5fa"}" />`;
         }
 
         if (!sagitta) {
-          edgeSvg = `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="#60a5fa" stroke-width="2" stroke-linecap="round"/>${arrowSvg}`;
+          edgeSvg = `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${lineColor || "#60a5fa"}" stroke-width="2" stroke-linecap="round"/>${arrowSvg}`;
         } else {
-          edgeSvg = `<path d="M ${a.x} ${a.y} Q ${ctrl.x} ${ctrl.y} ${b.x} ${b.y}" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round"/>${arrowSvg}`;
+          edgeSvg = `<path d="M ${a.x} ${a.y} Q ${ctrl.x} ${ctrl.y} ${b.x} ${b.y}" fill="none" stroke="${lineColor || "#60a5fa"}" stroke-width="2" stroke-linecap="round"/>${arrowSvg}`;
         }
       }
 
@@ -554,9 +561,9 @@
       const labelWidth = Math.max(22, sym.length * 8 + 10);
 
       svgElements.push(`
-        <g transform="translate(${lx}, ${ly})">
-          <rect x="${-labelWidth / 2}" y="-8" width="${labelWidth}" height="16" rx="4" fill="#090d16" stroke="#1e293b" stroke-width="1"/>
-          <text x="0" y="0" fill="#cbd5e1" font-family="'Fira Code', monospace" font-size="9" font-weight="bold" text-anchor="middle" dominant-baseline="central">${sym}</text>
+        <g class="diagram-particle-label" data-line-index="${line.index ?? diagram.lines.indexOf(line)}" transform="translate(${lx}, ${ly})">
+          ${showLabelBoxes ? `<rect x="${-labelWidth / 2}" y="-8" width="${labelWidth}" height="16" rx="4" fill="${monochrome ? "#fff" : "#090d16"}" stroke="${monochrome ? "#000" : "#1e293b"}" stroke-width="1"/>` : ''}
+          <text x="0" y="0" fill="${labelTextColor}" font-family="'Fira Code', monospace" font-size="9" font-weight="bold" text-anchor="middle" dominant-baseline="central">${sym}</text>
         </g>
       `);
     });
@@ -565,7 +572,7 @@
     diagram.vertices.forEach((v) => {
       if (!v.pos) return;
       svgElements.push(`
-        <circle cx="${v.pos.x}" cy="${v.pos.y}" r="5" fill="#f43f5e" stroke="#020617" stroke-width="2"/>
+        <circle cx="${v.pos.x}" cy="${v.pos.y}" r="5" fill="${vertexFill}" stroke="${monochrome ? "#000" : "#020617"}" stroke-width="2"/>
       `);
     });
 
@@ -573,7 +580,7 @@
     diagram.inStates.forEach((is) => {
       if (!is.pos) return;
       svgElements.push(`
-        <circle cx="${is.pos.x}" cy="${is.pos.y}" r="6.5" fill="#10b981" stroke="#020617" stroke-width="2"/>
+        <circle cx="${is.pos.x}" cy="${is.pos.y}" r="6.5" fill="${boundaryInFill}" stroke="${monochrome ? "#000" : "#020617"}" stroke-width="2"/>
       `);
     });
 
@@ -581,7 +588,7 @@
     diagram.outStates.forEach((os) => {
       if (!os.pos) return;
       svgElements.push(`
-        <circle cx="${os.pos.x}" cy="${os.pos.y}" r="6.5" fill="#06b6d4" stroke="#020617" stroke-width="2"/>
+        <circle cx="${os.pos.x}" cy="${os.pos.y}" r="6.5" fill="${boundaryOutFill}" stroke="${monochrome ? "#000" : "#020617"}" stroke-width="2"/>
       `);
     });
 
@@ -596,11 +603,14 @@
   }
 
   /**
-   * Extracts only minimal particle identity info
+   * Stores the minimum non-circular particle identity needed to recreate a line.
+   * The full Particle object is intentionally NOT stored because it points to its
+   * antiparticle and would create circular data.
    */
   function extractParticleInfo(p) {
     if (!p) return null;
     return {
+      id: p.id || '',
       name: p.name || p.id || '',
       symbol: p.symbol || p.name || p.id || '',
       matterType: p.matterType || 'particle' // 'particle', 'antiparticle', or 'both'
@@ -693,8 +703,9 @@
       : '<span class="text-slate-500">Order 0</span>';
 
     const card = document.createElement('div');
-    card.className = 'diagram-card bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-3 flex flex-col justify-between';
+    card.className = 'diagram-card bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-3 flex flex-col justify-between cursor-pointer hover:border-slate-600 transition-colors';
     card.id = `diagram-card-${diagramIndex}`;
+    card.title = 'Open diagram in a new tab';
 
     // Direct in-memory attachment
     card._diagramData = diagramData;
@@ -722,6 +733,12 @@
       </div>
     `;
 
+    card.addEventListener('click', () => {
+      if (typeof global.openDiagramEditor === 'function') {
+        global.openDiagramEditor(diagramData);
+      }
+    });
+
     gridElement.appendChild(card);
   }
 
@@ -729,6 +746,7 @@
     dist,
     getClosestPointOnSegment,
     getClosestPointOnArc,
+    getLineControlPoint,
     computeDiagramPositions,
     renderDiagramSVG,
     renderDiagramToContainer

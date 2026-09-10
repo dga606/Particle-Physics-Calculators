@@ -45,6 +45,60 @@
         config.customParticles.forEach(pDef => global.Particles.registerCustom(pDef));
       }
 
+      // Shared, output-page-level data used by every diagram editor tab.
+      // IMPORTANT: never carry Particle objects into this data. Keep only plain
+      // serializable particle identity and the custom-definition information.
+      const serializeParticleRef = (p) => {
+        if (!p) return null;
+        return {
+          id: p.id || '',
+          name: p.name || p.symbol || p.id || '',
+          symbol: p.symbol || p.name || p.id || '',
+          matterType: p.matterType || (p.isAnti ? 'antiparticle' : 'particle')
+        };
+      };
+      const serializeSlot = (slot) => {
+        if (!slot) return null;
+        if (slot.isList) {
+          return {
+            isList: true,
+            id: slot.id || slot.name || '',
+            name: slot.name || slot.id || '',
+            particles: Array.isArray(slot.particles) ? slot.particles.map(serializeParticleRef).filter(Boolean) : []
+          };
+        }
+        return serializeParticleRef(slot);
+      };
+      const sharedCustomVertices = (Array.isArray(config.customVertices) ? config.customVertices : []).map(v => ({
+        id: v.id || '',
+        incoming: Array.isArray(v.incoming) ? v.incoming.map(serializeSlot).filter(Boolean) : [],
+        outgoing: Array.isArray(v.outgoing) ? v.outgoing.map(serializeSlot).filter(Boolean) : [],
+        couplingOrders: { ...(v.couplingOrders || {}) }
+      }));
+      const sharedCustomLists = (Array.isArray(config.customLists) ? config.customLists : []).map(l => ({
+        id: l.id || l.name || '',
+        name: l.name || l.id || '',
+        description: l.description || '',
+        particles: Array.isArray(l.particles) ? l.particles.map(serializeParticleRef).filter(Boolean) : []
+      }));
+      window.__DIAGRAM_SHARED_DATA = {
+        customParticles: (Array.isArray(config.customParticles) ? config.customParticles : []).map(p => ({
+          isPair: !!p.isPair,
+          id: p.id || '',
+          symbol: p.symbol || p.id || '',
+          antiSymbol: p.antiSymbol || '',
+          category: p.category || 'other',
+          charge: Number(p.charge) || 0,
+          lepton: Number(p.lepton) || 0,
+          baryon: Number(p.baryon) || 0
+        })),
+        customLists: sharedCustomLists,
+        customVertices: sharedCustomVertices,
+        couplingList: Array.isArray(config.couplingList) ? [...config.couplingList] : [],
+        couplingOrders: { ...(config.couplingOrders || {}) },
+        formulaText: `${config.incoming.map(p => p.symbol || p.name || p.id).join(' + ')} → ${config.outgoing.map(p => p.symbol || p.name || p.id).join(' + ')}`
+      };
+
       const inStates = config.incoming.map(p => new global.InState(global.Particles.get(p.id) || p));
       const outStates = config.outgoing.map(p => new global.OutState(global.Particles.get(p.id) || p));
 

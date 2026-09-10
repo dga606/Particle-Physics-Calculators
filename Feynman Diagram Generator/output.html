@@ -122,6 +122,31 @@
       }
     };
 
+    // ------------------------------------------------------------------------
+    // Diagram inspector launcher
+    // ------------------------------------------------------------------------
+    window.openDiagramEditor = function(diagramData) {
+      const shared = window.__DIAGRAM_SHARED_DATA || {};
+      const payload = {
+        version: 1,
+        createdAt: Date.now(),
+        diagramData,
+        sharedData: shared
+      };
+      const token = 'feynman_inspect_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+      try {
+        localStorage.setItem(token, JSON.stringify(payload));
+      } catch (err) {
+        alert('Unable to open diagram inspector: browser local storage is unavailable.');
+        return;
+      }
+      const editorWindow = window.open('inspect.html#' + encodeURIComponent(token), '_blank');
+      if (!editorWindow) {
+        localStorage.removeItem(token);
+        alert('The browser blocked the new tab. Please allow pop-ups for this site.');
+      }
+    };
+
     window.addEventListener('DOMContentLoaded', () => {
       if (window.MainEngine && typeof window.MainEngine.runOutputPage === 'function') {
         window.MainEngine.runOutputPage();

@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Feynman Diagram Inspector</title>
+<script src="particles.js"></script>
+<script src="image_engine.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; min-height: 100%; background: #fff; color: #000; }
+  body { font-family: Arial, Helvetica, sans-serif; overflow-x: hidden; }
+  #page { width: min(1500px, calc(100vw - 40px)); margin: 0 auto; padding: 22px 20px 80px; }
+  #reaction { font-size: 20px; font-weight: 700; line-height: 1.35; margin-bottom: 7px; }
+  #orders { font-size: 15px; line-height: 1.4; margin-bottom: 16px; }
+  #toolbar { display: flex; flex-wrap: wrap; gap: 9px; margin-bottom: 18px; }
+  button { background: #fff; color: #000; border: 1.5px solid #000; border-radius: 5px; padding: 8px 13px; font-size: 14px; cursor: pointer; }
+  button:hover { background: #f1f1f1; }
+  button.active { background: #000; color: #fff; }
+  #canvas-wrap { width: 100%; min-height: 200px; overflow: visible; }
+  #canvas-stage { width: 100%; overflow: hidden; }
+  #canvas-wrap svg { display: block; max-width: none; overflow: visible; margin: 0 auto; }
+  .diagram-particle-label { cursor: grab; }
+  .diagram-particle-label:active { cursor: grabbing; }
+  .editor-handle { vector-effect: non-scaling-stroke; }
+  #error { padding: 18px; border: 1px solid #000; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<div id="page">
+  <div id="reaction"></div>
+  <div id="orders"></div>
+  <div id="toolbar">
+    <button id="btn-edit" type="button">Edit Mode : Off</button>
+    <button id="btn-svg" type="button">Download SVG</button>
+    <button id="btn-png" type="button">Download PNG</button>
+  </div>
+  <div id="canvas-wrap"></div>
+</div>
+<script>
+(function() {
+  'use strict';
+
+  const token = decodeURIComponent((location.hash || '').replace(/^#/, ''));
+  let payload = null;
+  try {
+    if (!token) throw new Error('No inspector data token was provided.');
+    const raw = localStorage.getItem(token);
+    if (!raw) throw new Error('The diagram data could not be found in local storage.');
+    payload = JSON.parse(raw);
+    localStorage.removeItem(token);
+  } catch (err) {
+    document.getElementById('canvas-wrap').innerHTML = '<div id="error"><strong>Unable to load diagram.</strong>\n' + String(err.message || err) + '</div>';
+    return;
+  }
+
+  const diagramData = payload.diagramData || {};
+  const sharedData = payload.sharedData || {};
+
+  if (Array.isArray(sharedData.customParticles)) {
+    sharedData.customParticles.forEach(function(def) {
+      try { Particles.registerCustom(def); } catch (_) {}
+    });
+  }
+
+  document.getElementById('reaction').textContent = 'Reaction Formula: ' + (sharedData.formulaText || '');
+  const orderEntries = Object.entries(diagramData.order || {}).filter(function(entry) { return (entry[1] || 0) > 0; });
+  document.getElementById('orders').textContent = 'Coupling Order: ' + (orderEntries.length
+    ? orderEntries.map(function(entry) { return entry[0] + ': ' + entry[1]; }).join(', ')
+    : '0');
+
+  function clonePos(pos) { return pos ? { x:Number(pos.x), y:Number(pos.y) } : null; }
+
+  function makeParticle(info) {
+    if (!info) return null;
+    const registered = Particles.get(info.id || '');
+    if (registered) return registered;
+
+    const custom = (sharedData.customParticles || []).find(function(def) {
+      return def.id === info.id || (def.isPair && info.id === def.id + '_bar');
+    });
+    const fallback = {
+      id: info.id || '',
+      name: info.name || info.id || '',
+      symbol: info.symbol || info.name || info.id || '',
+      matterType: info.matterType || 'particle',
+      categories: custom ? [custom.category || 'other', 'custom'] : [],
+      aliases: [info.id || '', info.symbol || '', info.name || '']
+    };
+    fallback.hasCategory = function(cat) { return this.categories.includes(cat); };
+    Object.defineProperty(fallback, 'isSelfConjugate', { value:fallback.matterType === 'both', enumerable:false });
+    return fallback;
+  }
+
+  const inStates = (diagramData.inStates || []).map(function(n) {
+    return { index:n.index, type:'inState', particle:makeParticle(n.particle), pos:clonePos(n.pos) };
+  });
+  const outStates = (diagramData.outStates || []).map(function(n) {
+    return { index:n.index, type:'outState', particle:makeParticle(n.particle), pos:clonePos(n.pos) };
+  });
+  const vertices = (diagramData.vertices || []).map(function(n) {
+    return { index:n.index, type:'vertex', order:Object.assign({}, n.order || {}), pos:clonePos(n.pos) };
+  });
+
+  function resolvePort(ref) {
+    if (!ref) return null;
+    if (ref.type === 'inState') return inStates[ref.index] || null;
+    if (ref.type === 'outState') return outStates[ref.index] || null;
+    if (ref.type === 'vertex') return vertices[ref.index] || null;
+    return null;
+  }
+
+  const lines = (diagramData.lines || []).map(function(l) {
+    return {
+      index:l.index,
+      particle:makeParticle(l.particle),
+      particleType:l.particleType || (l.particle && l.particle.matterType) || 'particle',
+      shape:l.shape || 'straight',
+      sagitta:Number(l.sagitta || 0),
+      inPos:clonePos(l.inPos),
+      outPos:clonePos(l.outPos),
+      inPort:resolvePort(l.inPort),
+      outPort:resolvePort(l.outPort)
+    };
+  });
+
+  const diagram = {
+    order:Object.assign({}, diagramData.order || {}),
+    totalOrder:Number(diagramData.totalOrder || 0),
+    noOfLoops:Number(diagramData.noOfLoops || 0),
+    inStates:inStates,
+    outStates:outStates,
+    vertices:vertices,
+    lines:lines
+  };
+
+  const labelNudges = new Map();
+  let editMode = false;
+  let drag = null;
+
+  function syncLines() {
+    diagram.lines.forEach(function(line) {
+      if (line.inPort && line.inPort.pos) line.inPos = clonePos(line.inPort.pos);
+      if (line.outPort && line.outPort.pos) line.outPos = clonePos(line.outPort.pos);
+    });
+  }
+  function bezierPoint(a,c,b,t) {
+    const inv=1-t;
+    return {x:inv*inv*a.x+2*inv*t*c.x+t*t*b.x, y:inv*inv*a.y+2*inv*t*c.y+t*t*b.y};
+  }
+  function bezierDerivative(a,c,b,t) {
+    return {x:2*(1-t)*(c.x-a.x)+2*t*(b.x-c.x), y:2*(1-t)*(c.y-a.y)+2*t*(b.y-c.y)};
+  }
+  function getControlPoint(line) {
+    if (window.ImageEngine && typeof ImageEngine.getLineControlPoint === 'function') return ImageEngine.getLineControlPoint(line);
+    if (!line.inPos || !line.outPos) return null;
+    const dx=line.outPos.x-line.inPos.x, dy=line.outPos.y-line.inPos.y, len=Math.hypot(dx,dy)||1, s=line.sagitta||0;
+    return {x:(line.inPos.x+line.outPos.x)/2+2*s*(-dy/len), y:(line.inPos.y+line.outPos.y)/2+2*s*(dx/len)};
+  }
+  function linePoint(line,t) {
+    if (!line.inPos || !line.outPos) return null;
+    if (!line.sagitta) return {x:line.inPos.x+t*(line.outPos.x-line.inPos.x), y:line.inPos.y+t*(line.outPos.y-line.inPos.y)};
+    return bezierPoint(line.inPos,getControlPoint(line),line.outPos,t);
+  }
+  function lineBaseMidpoint(line) { return {x:(line.inPos.x+line.outPos.x)/2,y:(line.inPos.y+line.outPos.y)/2}; }
+  function lineNormal(line) {
+    const dx=line.outPos.x-line.inPos.x, dy=line.outPos.y-line.inPos.y, len=Math.hypot(dx,dy)||1;
+    return {x:-dy/len,y:dx/len};
+  }
+  function calcDefaultLabel(line) {
+    const mid=linePoint(line,0.5);
+    const d=line.sagitta ? bezierDerivative(line.inPos,getControlPoint(line),line.outPos,0.5) : {x:line.outPos.x-line.inPos.x,y:line.outPos.y-line.inPos.y};
+    const len=Math.hypot(d.x,d.y)||1;
+    const nx=-d.y/len, ny=d.x/len, offset=line.sagitta!==0 ? (line.sagitta>0?14:-14) : -14;
+    return {x:mid.x+offset*nx,y:mid.y+offset*ny};
+  }
+  function pointToSvg(svg,x,y) {
+    const pt=svg.createSVGPoint(); pt.x=x; pt.y=y;
+    const ctm=svg.getScreenCTM(); return ctm ? pt.matrixTransform(ctm.inverse()) : {x:0,y:0};
+  }
+  function applyLabelNudges(svg) {
+    svg.querySelectorAll('.diagram-particle-label').forEach(function(g) {
+      const idx=Number(g.getAttribute('data-line-index')), line=diagram.lines[idx];
+      if (!line) return;
+      const base=calcDefaultLabel(line), n=labelNudges.get(idx)||{x:0,y:0};
+      g.setAttribute('transform','translate('+(base.x+n.x)+', '+(base.y+n.y)+')');
+      g.style.pointerEvents=editMode?'auto':'none';
+    });
+  }
+
+  function calculateEditorBounds() {
+    let minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity;
+    function include(p) {
+      if (!p) return;
+      minX=Math.min(minX,p.x); maxX=Math.max(maxX,p.x);
+      minY=Math.min(minY,p.y); maxY=Math.max(maxY,p.y);
+    }
+    diagram.inStates.forEach(function(n){ include(n.pos); });
+    diagram.vertices.forEach(function(n){ include(n.pos); });
+    diagram.outStates.forEach(function(n){ include(n.pos); });
+    diagram.lines.forEach(function(line){
+      include(line.inPos); include(line.outPos);
+      if (line.sagitta) include(getControlPoint(line));
+    });
+    if (!Number.isFinite(minX)) { minX=0; maxX=300; minY=0; maxY=200; }
+    const padX=45, padTop=45, padBottom=45;
+    return {
+      left:minX-padX,
+      right:maxX+padX,
+      top:minY-padTop,
+      bottom:Math.max(minY+200, maxY+padBottom)
+    };
+  }
+
+  const editorBounds = calculateEditorBounds();
+  let displayedBottom = editorBounds.bottom;
+
+  function currentNeededBottom() {
+    let maxY=editorBounds.top + 200;
+    function include(p) { if (p) maxY=Math.max(maxY,p.y); }
+    diagram.inStates.forEach(function(n){include(n.pos);});
+    diagram.vertices.forEach(function(n){include(n.pos);});
+    diagram.outStates.forEach(function(n){include(n.pos);});
+    diagram.lines.forEach(function(line){
+      include(line.inPos); include(line.outPos);
+      if (line.sagitta) include(getControlPoint(line));
+    });
+    return maxY + 45;
+  }
+
+  function clampNodePosition(p) {
+    const margin=2;
+    return {
+      x: Math.max(editorBounds.left + margin, Math.min(editorBounds.right - margin, Number(p.x))),
+      y: Math.max(editorBounds.top + margin, Number(p.y))
+    };
+  }
+
+  function resizeEditorViewport() {
+    const target=Math.max(editorBounds.bottom, currentNeededBottom());
+    // Grow downward gradually. Never shrink and never change the fixed horizontal frame.
+    if (target > displayedBottom) {
+      displayedBottom = Math.min(target, displayedBottom + Math.max(10, Math.min(28, (target-displayedBottom)*0.16)));
+    }
+    displayedBottom = Math.max(editorBounds.bottom, displayedBottom);
+  }
+
+  function buildSvg() {
+    syncLines();
+    if (!window.ImageEngine || typeof ImageEngine.renderDiagramSVG !== 'function') throw new Error('image_engine.js renderer is unavailable.');
+    const holder=document.createElement('div');
+    holder.innerHTML=ImageEngine.renderDiagramSVG(diagram, {monochrome:true, showLabelBoxes:false}).trim();
+    const svg=holder.querySelector('svg');
+    if (!svg) throw new Error('image_engine.js did not return an SVG diagram.');
+
+    resizeEditorViewport();
+    const width=editorBounds.right-editorBounds.left;
+    const height=displayedBottom-editorBounds.top;
+    svg.setAttribute('viewBox', editorBounds.left+' '+editorBounds.top+' '+width+' '+height);
+    svg.removeAttribute('class');
+    svg.style.width=width+'px';
+    svg.style.height=height+'px';
+    svg.style.maxHeight='none';
+    svg.style.maxWidth='none';
+    svg.style.display='block';
+    svg.style.margin='0 auto';
+    svg.style.overflow='visible';
+
+    applyLabelNudges(svg);
+
+    if (editMode) {
+      const makeHandle=function(cx,cy,r,cls,strokeWidth){
+        const h=document.createElementNS('http://www.w3.org/2000/svg','circle');
+        h.setAttribute('class','editor-handle '+cls);
+        h.setAttribute('cx',cx); h.setAttribute('cy',cy); h.setAttribute('r',r);
+        h.setAttribute('fill','#fff'); h.setAttribute('stroke','#000'); h.setAttribute('stroke-width',strokeWidth);
+        h.style.cursor='move';
+        return h;
+      };
+
+      diagram.inStates.forEach(function(n,idx){
+        if(!n.pos)return;
+        const h=makeHandle(n.pos.x,n.pos.y,8,'editor-node-handle',1.5);
+        h.addEventListener('pointerdown',function(e){beginNodeDrag(e,'inState',idx);});
+        svg.appendChild(h);
+      });
+      diagram.vertices.forEach(function(n,idx){
+        if(!n.pos)return;
+        const h=makeHandle(n.pos.x,n.pos.y,8,'editor-node-handle',1.5);
+        h.addEventListener('pointerdown',function(e){beginNodeDrag(e,'vertex',idx);});
+        svg.appendChild(h);
+      });
+      diagram.outStates.forEach(function(n,idx){
+        if(!n.pos)return;
+        const h=makeHandle(n.pos.x,n.pos.y,8,'editor-node-handle',1.5);
+        h.addEventListener('pointerdown',function(e){beginNodeDrag(e,'outState',idx);});
+        svg.appendChild(h);
+      });
+
+      diagram.lines.forEach(function(line,idx) {
+        if (!line.inPos || !line.outPos) return;
+        const p=linePoint(line,0.5); if (!p) return;
+        const h=makeHandle(p.x,p.y,5,'editor-curve-handle',1.5);
+        h.style.cursor='pointer';
+        h.addEventListener('pointerdown',function(e){beginCurveDrag(e,idx);});
+        svg.appendChild(h);
+      });
+    }
+
+    return svg;
+  }
+
+  function draw() {
+    const wrap=document.getElementById('canvas-wrap');
+    try { wrap.replaceChildren(buildSvg()); }
+    catch(err) { wrap.innerHTML='<div id="error"><strong>Editor Error</strong>\n'+String(err.message||err)+'</div>'; }
+  }
+
+  function beginNodeDrag(e,type,idx) {
+    if(!editMode)return;
+    e.preventDefault();
+    drag={type:'node',nodeType:type,index:idx};
+    try{e.currentTarget.setPointerCapture(e.pointerId);}catch(_){}
+  }
+
+  function beginCurveDrag(e,idx) {
+    if(!editMode)return;
+    e.preventDefault();
+    drag={type:'curve',index:idx};
+    try{e.currentTarget.setPointerCapture(e.pointerId);}catch(_){}
+  }
+
+  document.addEventListener('pointerdown',function(e){
+    if(!editMode)return;
+    const label=e.target.closest && e.target.closest('.diagram-particle-label');
+    if(!label)return;
+    const idx=Number(label.getAttribute('data-line-index')), svg=document.querySelector('#canvas-wrap svg');
+    if(!svg || !Number.isInteger(idx) || !diagram.lines[idx])return;
+    e.preventDefault();
+    const p=pointToSvg(svg,e.clientX,e.clientY);
+    drag={type:'label',index:idx,last:{x:p.x,y:p.y}};
+  });
+
+  document.addEventListener('pointermove',function(e){
+    if(!drag || !editMode)return;
+    const svg=document.querySelector('#canvas-wrap svg'); if(!svg)return;
+    const p=pointToSvg(svg,e.clientX,e.clientY);
+
+    if(drag.type==='node') {
+      let node=null;
+      if(drag.nodeType==='inState') node=diagram.inStates[drag.index];
+      else if(drag.nodeType==='vertex') node=diagram.vertices[drag.index];
+      else node=diagram.outStates[drag.index];
+      if(node && node.pos) {
+        node.pos=clampNodePosition(p);
+      }
+      syncLines();
+    } else if(drag.type==='curve') {
+      const line=diagram.lines[drag.index];
+      if(line && line.inPos && line.outPos) {
+        const mid=lineBaseMidpoint(line), n=lineNormal(line);
+        const clampedPoint=clampNodePosition(p);
+        const signed=(clampedPoint.x-mid.x)*n.x+(clampedPoint.y-mid.y)*n.y;
+        line.sagitta=Math.max(-5000,Math.min(5000,2*signed));
+        const ctrl=getControlPoint(line);
+        // Keep the curve control point inside the fixed horizontal frame and above the top boundary.
+        if (ctrl.x < editorBounds.left || ctrl.x > editorBounds.right || ctrl.y < editorBounds.top) {
+          line.sagitta = line.sagitta * 0.85;
+        }
+      }
+    } else {
+      const delta={x:p.x-drag.last.x,y:p.y-drag.last.y}, old=labelNudges.get(drag.index)||{x:0,y:0};
+      labelNudges.set(drag.index,{x:old.x+delta.x,y:old.y+delta.y});
+      drag.last={x:p.x,y:p.y};
+    }
+    draw();
+  });
+
+  document.addEventListener('pointerup',function(){drag=null;});
+  document.addEventListener('pointercancel',function(){drag=null;});
+
+  document.getElementById('btn-edit').addEventListener('click',function(){
+    editMode=!editMode;
+    this.textContent=editMode?'Edit Mode : On':'Edit Mode : Off';
+    this.classList.toggle('active',editMode);
+    draw();
+  });
+
+  function exportSvgText() {
+    const svg=buildSvg(); svg.querySelectorAll('.editor-handle').forEach(function(h){h.remove();});
+    const vb=(svg.getAttribute('viewBox')||'0 0 300 200').trim().split(/\s+/).map(Number);
+    if(vb.length===4){
+      svg.setAttribute('width',String(Math.max(1,Math.ceil(vb[2]))));
+      svg.setAttribute('height',String(Math.max(1,Math.ceil(vb[3]))));
+    }
+    const bg=document.createElementNS('http://www.w3.org/2000/svg','rect');
+    bg.setAttribute('x',String(vb[0])); bg.setAttribute('y',String(vb[1]));
+    bg.setAttribute('width',String(vb[2])); bg.setAttribute('height',String(vb[3])); bg.setAttribute('fill','#fff');
+    svg.insertBefore(bg,svg.firstChild);
+    return '<?xml version="1.0" encoding="UTF-8"?>\n'+new XMLSerializer().serializeToString(svg);
+  }
+  document.getElementById('btn-svg').addEventListener('click',function(){
+    try { const blob=new Blob([exportSvgText()],{type:'image/svg+xml;charset=utf-8'}), url=URL.createObjectURL(blob), a=document.createElement('a'); a.href=url;a.download='feynman-diagram.svg';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},1000); }
+    catch(err){alert('Unable to export SVG: '+(err.message||err));}
+  });
+  document.getElementById('btn-png').addEventListener('click',function(){
+    try {
+      const svgText=exportSvgText(), blob=new Blob([svgText],{type:'image/svg+xml;charset=utf-8'}), url=URL.createObjectURL(blob), img=new Image();
+      img.onload=function(){
+        const vb=(buildSvg().getAttribute('viewBox')||'0 0 300 200').split(/\s+/).map(Number), scale=Math.max(1,Math.min(3,window.devicePixelRatio||1));
+        const canvas=document.createElement('canvas'); canvas.width=Math.max(1,Math.ceil(vb[2]*scale));canvas.height=Math.max(1,Math.ceil(vb[3]*scale));
+        const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(img,0,0,canvas.width,canvas.height);
+        canvas.toBlob(function(png){URL.revokeObjectURL(url);if(!png)return;const pngUrl=URL.createObjectURL(png),a=document.createElement('a');a.href=pngUrl;a.download='feynman-diagram.png';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(pngUrl);},1000);},'image/png');
+      };
+      img.onerror=function(){URL.revokeObjectURL(url);alert('Unable to export PNG.');}; img.src=url;
+    } catch(err){alert('Unable to export PNG: '+(err.message||err));}
+  });
+
+  draw();
+})();
+</script>
+</body>
+</html>
