@@ -402,6 +402,36 @@
         </div>
     </div>
 
+    <!-- Remove Custom Vertex Modal -->
+    <div id="modal-remove-vertex" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-3 hidden">
+        <div class="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-md w-full p-4 sm:p-5 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h4 class="text-sm font-bold text-slate-100">Remove Custom Vertices</h4>
+                <button type="button" onclick="closeRemoveVertexModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:text-rose-400"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="remove-vertex-list" class="max-h-[300px] overflow-y-auto space-y-2 pr-1"></div>
+            <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                <button type="button" onclick="removeAllVertices()" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-950/50 hover:bg-rose-900/70 text-rose-300 border border-rose-800/60">Remove All</button>
+                <button type="button" onclick="closeRemoveVertexModal()" class="px-4 py-1.5 rounded-xl text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Remove Custom List Modal -->
+    <div id="modal-remove-list" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-3 hidden">
+        <div class="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-md w-full p-4 sm:p-5 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h4 class="text-sm font-bold text-slate-100">Remove Custom Lists</h4>
+                <button type="button" onclick="closeRemoveListModal()" class="w-7 h-7 rounded-lg text-slate-400 hover:text-rose-400"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="remove-list-list" class="max-h-[300px] overflow-y-auto space-y-2 pr-1"></div>
+            <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                <button type="button" onclick="removeAllLists()" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-950/50 hover:bg-rose-900/70 text-rose-300 border border-rose-800/60">Remove All</button>
+                <button type="button" onclick="closeRemoveListModal()" class="px-4 py-1.5 rounded-xl text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Custom Vertex Modal -->
     <div id="modal-custom-vertex" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 hidden overflow-y-auto">
         <div class="bg-slate-900 border border-slate-700/80 rounded-2xl max-w-5xl w-full p-3 sm:p-5 shadow-2xl space-y-3.5 my-auto max-h-[95vh] overflow-y-auto">
@@ -436,6 +466,10 @@
                         <div class="space-y-1"><div class="text-[10px] font-bold text-indigo-400 text-center">Leptons</div><div id="vtx-col-leptons" class="space-y-1.5 max-h-[220px] overflow-y-auto pr-0.5"></div></div>
                         <div class="space-y-1"><div class="text-[10px] font-bold text-emerald-400 text-center">Quarks</div><div id="vtx-col-quarks" class="space-y-1.5 max-h-[220px] overflow-y-auto pr-0.5"></div></div>
                         <div class="space-y-1"><div class="text-[10px] font-bold text-amber-400 text-center">Bosons</div><div id="vtx-col-bosons" class="space-y-1.5 max-h-[220px] overflow-y-auto pr-0.5"></div></div>
+                    </div>
+                    <div id="vtx-section-other" class="hidden border-t border-slate-800 pt-1.5 space-y-1">
+                        <div class="text-[10px] font-bold text-purple-400 text-center">Other</div>
+                        <div id="vtx-col-other" class="grid grid-cols-3 gap-1.5 max-h-[100px] overflow-y-auto pr-0.5"></div>
                     </div>
                     <div id="vtx-section-lists" class="border-t border-slate-800 pt-1.5 space-y-1">
                         <div class="flex items-center justify-between"><span class="text-[10px] font-bold text-teal-400">Lists</span><button type="button" onclick="openAddListModal()" class="text-[9px] text-teal-400">+ New List</button></div>
@@ -485,6 +519,10 @@
                         <div class="space-y-1"><div class="text-[10px] font-bold text-indigo-400 text-center">Leptons</div><div id="list-col-leptons" class="space-y-1.5 max-h-[260px] overflow-y-auto pr-0.5"></div></div>
                         <div class="space-y-1"><div class="text-[10px] font-bold text-emerald-400 text-center">Quarks</div><div id="list-col-quarks" class="space-y-1.5 max-h-[260px] overflow-y-auto pr-0.5"></div></div>
                         <div class="space-y-1"><div class="text-[10px] font-bold text-amber-400 text-center">Bosons</div><div id="list-col-bosons" class="space-y-1.5 max-h-[260px] overflow-y-auto pr-0.5"></div></div>
+                    </div>
+                    <div id="list-section-other" class="hidden border-t border-slate-800 pt-1.5 space-y-1">
+                        <div class="text-[10px] font-bold text-purple-400 text-center">Other</div>
+                        <div id="list-col-other" class="grid grid-cols-3 gap-1.5 max-h-[100px] overflow-y-auto pr-0.5"></div>
                     </div>
                 </div>
                 <div class="col-span-4 bg-slate-950/80 border border-teal-500/50 rounded-2xl p-2.5 shadow-lg flex flex-col h-full">
@@ -788,9 +826,30 @@
                 </div>`;
             }
 
-            document.getElementById('col-leptons').innerHTML = leptons.map(p => renderPairGroup(p, 'indigo')).join('');
-            document.getElementById('col-quarks').innerHTML = quarks.map(p => renderPairGroup(p, 'emerald')).join('');
-            document.getElementById('col-bosons').innerHTML = bosons.map(p => renderPairGroup(p, 'amber')).join('');
+            const customGroups = { lepton: [], quark: [], boson: [], other: [] };
+            (state.customParticles || []).forEach(def => {
+                const item = {
+                    id: def.id, symbol: def.symbol, antiId: def.isPair ? (def.id + '_bar') : null, antiSymbol: def.isPair ? (def.antiSymbol || (def.symbol + '̄')) : null,
+                    cat: def.category || 'other', q: Number(def.charge) || 0, l: Number(def.lepton) || 0, b: Number(def.baryon) || 0, f: 'custom', single: !def.isPair
+                };
+                (customGroups[item.cat] || customGroups.other).push(item);
+            });
+            document.getElementById('col-leptons').innerHTML = leptons.map(p => renderPairGroup(p, 'indigo')).join('') + customGroups.lepton.map(p => renderPairGroup(p, 'indigo')).join('');
+            document.getElementById('col-quarks').innerHTML = quarks.map(p => renderPairGroup(p, 'emerald')).join('') + customGroups.quark.map(p => renderPairGroup(p, 'emerald')).join('');
+            document.getElementById('col-bosons').innerHTML = bosons.map(p => renderPairGroup(p, 'amber')).join('') + customGroups.boson.map(p => renderPairGroup(p, 'amber')).join('');
+            const otherSection = document.getElementById('section-other-particles');
+            const otherColumn = document.getElementById('col-other');
+            const otherBadge = document.getElementById('badge-other-count');
+            if (otherSection && otherColumn) {
+                const other = customGroups.other;
+                otherSection.classList.toggle('hidden', other.length === 0);
+                if (otherBadge) {
+                    const count = other.reduce((n, p) => n + (p.single ? 1 : 2), 0);
+                    otherBadge.textContent = `${count} particle${count === 1 ? '' : 's'}`;
+                }
+                otherColumn.innerHTML = other.map(p => renderPairGroup(p, 'purple')).join('');
+            }
+            renderRemoveCustomParticles();
         }
 
         function renderCouplingOrders() {
@@ -870,10 +929,143 @@
             checkConservation();
         }
 
-        function openCustomParticleModal() { document.getElementById('modal-custom-particle').classList.remove('hidden'); }
+        function makeSimpleParticleRef(id) {
+            const p = Particles.get(id);
+            if (!p) return null;
+            const category = (p.categories && p.categories.find(c => ['lepton','quark','boson','other','custom'].includes(c))) || 'other';
+            return {
+                id: p.id,
+                symbol: p.symbol || p.name || p.id,
+                name: p.name || p.id,
+                category,
+                charge: Number(p.charge) || 0,
+                lepton: Number(p.lepton) || 0,
+                baryon: Number(p.baryon) || 0,
+                isAnti: p.matterType === 'antiparticle'
+            };
+        }
+
+        function escapeJsString(value) {
+            return encodeURIComponent(String(value || ''));
+        }
+
+        function getEditorPaletteGroups() {
+            const leptons = [
+                ['e-', 'e+'], ['mu-', 'mu+'], ['tau-', 'tau+'],
+                ['nu_e', 'anti_nu_e'], ['nu_mu', 'anti_nu_mu'], ['nu_tau', 'anti_nu_tau']
+            ];
+            const quarks = [
+                ['u', 'u_bar'], ['d', 'd_bar'], ['c', 'c_bar'],
+                ['s', 's_bar'], ['t', 't_bar'], ['b', 'b_bar']
+            ];
+            const bosons = [['gamma'], ['W-', 'W+'], ['gluon'], ['Z0'], ['H0']];
+            const other = [];
+
+            for (const def of (state.customParticles || [])) {
+                const ids = def.isPair ? [def.id, def.id + '_bar'] : [def.id];
+                const group = def.category === 'lepton' ? leptons : def.category === 'quark' ? quarks : def.category === 'boson' ? bosons : other;
+                group.push(ids);
+            }
+            return { leptons, quarks, bosons, other };
+        }
+
+        function renderEditorParticleButton(id, theme) {
+            const p = Particles.get(id);
+            if (!p) return '';
+            const disabled = state.disabledParticles.has(p.id);
+            const label = p.symbol || p.name || p.id;
+            const safeId = escapeJsString(p.id);
+            return `<button type="button" ${disabled ? 'disabled' : ''} onclick="addVertexParticle('${safeId}')" class="w-full flex items-center justify-center rounded-lg border border-slate-800 bg-slate-900 hover:bg-${theme}-600 hover:text-white px-2 py-1.5 text-xs font-mono-code font-bold text-slate-100 transition-colors ${disabled ? 'opacity-30 line-through pointer-events-none' : ''}" title="Add ${label}">${label}</button>`;
+        }
+
+        function renderListParticleButton(id, theme) {
+            const p = Particles.get(id);
+            if (!p) return '';
+            const present = listDraft.elements.some(x => x && x.id === p.id);
+            const label = p.symbol || p.name || p.id;
+            const safeId = escapeJsString(p.id);
+            return `<button type="button" onclick="addListElement('${safeId}')" class="w-full flex items-center justify-center rounded-lg border border-slate-800 bg-slate-900 hover:bg-${theme}-600 hover:text-white px-2 py-1.5 text-xs font-mono-code font-bold text-slate-100 transition-colors ${present ? 'ring-1 ring-teal-500/60' : ''}" title="Add ${label} to list">${label}</button>`;
+        }
+
+        function renderVertexBuilder() {
+            const groups = getEditorPaletteGroups();
+            const renderGroup = (ids, theme) => ids.flatMap(pair => pair.map(id => renderEditorParticleButton(id, theme))).join('');
+            document.getElementById('vtx-col-leptons').innerHTML = renderGroup(groups.leptons, 'indigo');
+            document.getElementById('vtx-col-quarks').innerHTML = renderGroup(groups.quarks, 'emerald');
+            document.getElementById('vtx-col-bosons').innerHTML = renderGroup(groups.bosons, 'amber');
+            const vtxOther = document.getElementById('vtx-section-other');
+            const vtxOtherCol = document.getElementById('vtx-col-other');
+            if (vtxOther && vtxOtherCol) { vtxOther.classList.toggle('hidden', groups.other.length === 0); vtxOtherCol.innerHTML = renderGroup(groups.other, 'purple'); }
+            document.getElementById('vtx-col-lists').innerHTML = (state.customLists || []).map(list => {
+                const listId = list.id || list.name;
+                return `<button type="button" onclick="addVertexList('${escapeJsString(listId)}')" class="w-full rounded-lg border border-teal-700/60 bg-teal-950/30 hover:bg-teal-700/60 px-2 py-1.5 text-[10px] font-semibold text-teal-200 transition-colors" title="Add ${list.name} list as a vertex slot">${list.name}</button>`;
+            }).join('') || '<span class="col-span-3 text-[9px] text-slate-600 text-center py-2">No custom lists</span>';
+
+            const renderDraft = (items, side) => {
+                const color = side === 'incoming' ? 'amber' : 'indigo';
+                const title = side === 'incoming' ? 'Incoming' : 'Outgoing';
+                return (items || []).map((item, idx) => {
+                    const label = item.isList ? `List: ${item.name || item.id}` : (item.symbol || item.name || item.id);
+                    return `<div class="flex items-center justify-between gap-1 rounded-lg border border-slate-800 bg-slate-900 px-2 py-1.5"><span class="text-xs font-mono-code text-slate-100 truncate" title="${title}">${label}</span><button type="button" onclick="removeVertexDraftItem('${side}', ${idx})" class="text-[10px] text-slate-500 hover:text-rose-400 shrink-0"><i class="fa-solid fa-xmark"></i></button></div>`;
+                }).join('') || '<div class="flex-1 flex items-center justify-center text-[10px] text-slate-600">No particles added</div>';
+            };
+            document.getElementById('vtx-list-incoming').innerHTML = renderDraft(vertexDraft.incoming, 'incoming');
+            document.getElementById('vtx-list-outgoing').innerHTML = renderDraft(vertexDraft.outgoing, 'outgoing');
+
+            const ci = document.getElementById('vtx-card-incoming-container');
+            const co = document.getElementById('vtx-card-outgoing-container');
+            ci.className = vertexDraft.target === 'incoming'
+                ? 'col-span-3 bg-slate-950/80 border border-amber-500/50 rounded-2xl p-2.5 shadow-lg flex flex-col h-full ring-1 ring-amber-500/30'
+                : 'col-span-3 bg-slate-950/80 border border-slate-800 rounded-2xl p-2.5 shadow-lg flex flex-col h-full';
+            co.className = vertexDraft.target === 'outgoing'
+                ? 'col-span-3 bg-slate-950/80 border border-amber-500/50 rounded-2xl p-2.5 shadow-lg flex flex-col h-full ring-1 ring-amber-500/30'
+                : 'col-span-3 bg-slate-950/80 border border-slate-800 rounded-2xl p-2.5 shadow-lg flex flex-col h-full';
+
+            document.getElementById('vtx-mode-incoming-btn').className = vertexDraft.target === 'incoming'
+                ? 'flex-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-600 text-white'
+                : 'flex-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-400 hover:bg-slate-800';
+            document.getElementById('vtx-mode-outgoing-btn').className = vertexDraft.target === 'outgoing'
+                ? 'flex-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-600 text-white'
+                : 'flex-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-400 hover:bg-slate-800';
+
+            document.getElementById('vtx-coupling-container').innerHTML = state.couplingList.map(name => `
+                <div class="bg-slate-900 border border-slate-800 rounded-lg p-2 flex flex-col items-center gap-1">
+                    <span class="text-[10px] text-slate-300 font-semibold truncate max-w-full">${name}</span>
+                    <div class="flex items-center gap-1.5">
+                        <button type="button" onclick="adjustVertexCoupling('${escapeJsString(name)}', -1)" class="w-6 h-6 rounded bg-slate-800 text-slate-200 text-xs font-bold">-</button>
+                        <input type="number" min="0" value="${Number(vertexDraft.couplingOrders[name] || 0)}" onchange="setVertexCoupling('${escapeJsString(name)}', this.value)" class="w-10 text-center bg-transparent text-xs font-mono-code text-amber-300 focus:outline-none">
+                        <button type="button" onclick="adjustVertexCoupling('${escapeJsString(name)}', 1)" class="w-6 h-6 rounded bg-slate-800 text-slate-200 text-xs font-bold">+</button>
+                    </div>
+                </div>`).join('');
+        }
+
+        function renderListBuilder() {
+            const groups = getEditorPaletteGroups();
+            const renderGroup = (ids, theme) => ids.flatMap(pair => pair.map(id => renderListParticleButton(id, theme))).join('');
+            document.getElementById('list-col-leptons').innerHTML = renderGroup(groups.leptons, 'indigo');
+            document.getElementById('list-col-quarks').innerHTML = renderGroup(groups.quarks, 'emerald');
+            document.getElementById('list-col-bosons').innerHTML = renderGroup(groups.bosons, 'amber');
+            const listOther = document.getElementById('list-section-other');
+            const listOtherCol = document.getElementById('list-col-other');
+            if (listOther && listOtherCol) { listOther.classList.toggle('hidden', groups.other.length === 0); listOtherCol.innerHTML = renderGroup(groups.other, 'purple'); }
+            document.getElementById('list-elements-container').innerHTML = listDraft.elements.map((p, idx) => `
+                <div class="flex items-center justify-between gap-1 rounded-lg border border-slate-800 bg-slate-900 px-2 py-1.5">
+                    <span class="text-xs font-mono-code text-slate-100 truncate">${p.symbol || p.name || p.id}</span>
+                    <button type="button" onclick="removeListElement(${idx})" class="text-[10px] text-slate-500 hover:text-rose-400"><i class="fa-solid fa-xmark"></i></button>
+                </div>`).join('') || '<div class="flex-1 flex items-center justify-center text-[10px] text-slate-600">No elements added</div>';
+        }
+
+        function openCustomParticleModal() {
+            const form = document.getElementById('form-custom-particle');
+            if (form) form.reset();
+            document.querySelector('input[name="custom-pair-type"][value="single"]').checked = true;
+            updatePairTypeUI();
+            document.getElementById('modal-custom-particle').classList.remove('hidden');
+        }
         function closeCustomParticleModal() { document.getElementById('modal-custom-particle').classList.add('hidden'); }
         function updatePairTypeUI() {
-            const isPair = document.querySelector('input[name="custom-pair-type"]:checked').value === 'pair';
+            const pairRadio = document.querySelector('input[name="custom-pair-type"][value="pair"]');
+            const isPair = !!pairRadio && pairRadio.checked;
             document.getElementById('wrapper-anti-symbol').className = isPair ? 'space-y-1' : 'space-y-1 hidden';
         }
         function handleCustomParticleSubmit(e) {
@@ -886,17 +1078,48 @@
             const q = parseFloat(document.getElementById('cust-charge').value) || 0;
             const l = parseFloat(document.getElementById('cust-lepton').value) || 0;
             const b = parseFloat(document.getElementById('cust-baryon').value) || 0;
-
+            if (!sym || !id) return;
+            if (Particles.get(id) || state.customParticles.some(p => p.id === id)) {
+                alert('A particle with this ID already exists.');
+                return;
+            }
             const pDef = { isPair, symbol: sym, antiSymbol: antiSym, id, category: cat, charge: q, lepton: l, baryon: b };
+            try { Particles.registerCustom(pDef); } catch (err) { alert('Unable to add custom particle: ' + (err.message || err)); return; }
             state.customParticles.push(pDef);
-            Particles.registerCustom(pDef);
             closeCustomParticleModal();
             renderPalette();
+            renderVertexBuilder();
+            renderListBuilder();
         }
 
-        function openRemoveParticleModal() { document.getElementById('modal-remove-particle').classList.remove('hidden'); }
+        function renderRemoveCustomParticles() {
+            const container = document.getElementById('remove-custom-list');
+            container.innerHTML = state.customParticles.length ? state.customParticles.map((p, idx) => `
+                <div class="flex items-center justify-between gap-2 rounded-xl border border-slate-800 bg-slate-950 p-2.5">
+                    <div class="min-w-0"><div class="text-xs font-semibold text-slate-100 truncate">${p.symbol} <span class="text-slate-500">(${p.id})</span></div><div class="text-[10px] text-slate-500">${p.isPair ? 'Pair' : 'Single'} · ${p.category}</div></div>
+                    <button type="button" onclick="removeCustomParticleAt(${idx})" class="text-[10px] text-rose-400 hover:text-rose-300">Remove</button>
+                </div>`).join('') : '<div class="text-xs text-slate-600 text-center py-8">No custom particles</div>';
+        }
+        function openRemoveParticleModal() { renderRemoveCustomParticles(); document.getElementById('modal-remove-particle').classList.remove('hidden'); }
         function closeRemoveParticleModal() { document.getElementById('modal-remove-particle').classList.add('hidden'); }
-        function removeAllCustomParticles() { state.customParticles = []; closeRemoveParticleModal(); renderPalette(); }
+        function removeCustomParticleAt(index) {
+            const def = state.customParticles[index];
+            if (!def) return;
+            const ids = def.isPair ? [def.id, def.id + '_bar'] : [def.id];
+            state.disabledParticles.forEach(id => { if (ids.includes(id)) state.disabledParticles.delete(id); });
+            state.incoming = state.incoming.filter(p => !ids.includes(p.id));
+            state.outgoing = state.outgoing.filter(p => !ids.includes(p.id));
+            state.customParticles.splice(index, 1);
+            renderRemoveCustomParticles(); renderPalette(); renderVertexBuilder(); renderListBuilder(); updateUI();
+        }
+        function removeAllCustomParticles() {
+            const ids = new Set();
+            state.customParticles.forEach(def => { ids.add(def.id); if (def.isPair) ids.add(def.id + '_bar'); });
+            state.incoming = state.incoming.filter(p => !ids.has(p.id));
+            state.outgoing = state.outgoing.filter(p => !ids.has(p.id));
+            state.customParticles = [];
+            closeRemoveParticleModal(); renderPalette(); renderVertexBuilder(); renderListBuilder(); updateUI();
+        }
 
         function openAddCouplingModal() { document.getElementById('modal-add-coupling').classList.remove('hidden'); }
         function closeAddCouplingModal() { document.getElementById('modal-add-coupling').classList.add('hidden'); }
@@ -908,52 +1131,172 @@
                 state.couplingList.push(name);
                 state.couplingOrders[name] = val;
                 renderCouplingOrders();
+                renderVertexBuilder();
             }
             closeAddCouplingModal();
         }
 
-        function openRemoveCouplingModal() { document.getElementById('modal-remove-coupling').classList.remove('hidden'); }
+        function renderRemoveCouplings() {
+            const c = document.getElementById('list-remove-coupling');
+            const custom = state.couplingList.filter(name => !DEFAULT_COUPLINGS.includes(name));
+            c.innerHTML = custom.length ? custom.map(name => `<div class="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-950 p-2"><span class="text-xs text-slate-200">${name}</span><button type="button" onclick="removeCouplingConstant('${escapeJsString(name)}')" class="text-[10px] text-rose-400">Remove</button></div>`).join('') : '<div class="text-xs text-slate-600 text-center py-4">No custom couplings</div>';
+        }
+        function openRemoveCouplingModal() { renderRemoveCouplings(); document.getElementById('modal-remove-coupling').classList.remove('hidden'); }
         function closeRemoveCouplingModal() { document.getElementById('modal-remove-coupling').classList.add('hidden'); }
-        function removeCouplingConstant(name) {
+        function removeCouplingConstant(nameEncoded) {
+            const name = decodeURIComponent(nameEncoded);
             if (DEFAULT_COUPLINGS.includes(name)) return;
             state.couplingList = state.couplingList.filter(c => c !== name);
             delete state.couplingOrders[name];
-            renderCouplingOrders();
+            state.customVertices.forEach(v => { if (v.couplingOrders) delete v.couplingOrders[name]; });
+            Object.keys(vertexDraft.couplingOrders).forEach(k => { if (k === name) delete vertexDraft.couplingOrders[k]; });
+            renderCouplingOrders(); renderRemoveCouplings(); renderVertexBuilder();
         }
 
+        function addVertexParticle(encodedId) {
+            const id = decodeURIComponent(encodedId);
+            const p = makeSimpleParticleRef(id);
+            if (!p) return;
+            const target = vertexDraft.target === 'incoming' ? vertexDraft.incoming : vertexDraft.outgoing;
+            target.push(p);
+            renderVertexBuilder();
+        }
+        function addVertexList(encodedId) {
+            const id = decodeURIComponent(encodedId);
+            const list = (state.customLists || []).find(x => (x.id || x.name) === id || x.name === id);
+            if (!list) return;
+            const target = vertexDraft.target === 'incoming' ? vertexDraft.incoming : vertexDraft.outgoing;
+            target.push({ isList: true, id: list.id || list.name, name: list.name, description: list.description || '', particles: (list.particles || []).map(p => makeSimpleParticleRef(p.id)).filter(Boolean) });
+            renderVertexBuilder();
+        }
+        function removeVertexDraftItem(side, idx) {
+            const target = side === 'incoming' ? vertexDraft.incoming : vertexDraft.outgoing;
+            target.splice(idx, 1); renderVertexBuilder();
+        }
+        function setVertexTargetMode(mode) { vertexDraft.target = mode; renderVertexBuilder(); }
+        function clearVertexList(mode) { if (mode === 'incoming') vertexDraft.incoming = []; else vertexDraft.outgoing = []; renderVertexBuilder(); }
+        function copyReactionToVertex() {
+            vertexDraft.incoming = state.incoming.map(p => ({ ...p }));
+            vertexDraft.outgoing = state.outgoing.map(p => ({ ...p }));
+            renderVertexBuilder();
+        }
+        function setVertexCoupling(nameEncoded, value) {
+            const name = decodeURIComponent(nameEncoded);
+            vertexDraft.couplingOrders[name] = Math.max(0, parseInt(value, 10) || 0);
+            renderVertexBuilder();
+        }
+        function adjustVertexCoupling(nameEncoded, delta) {
+            const name = decodeURIComponent(nameEncoded);
+            vertexDraft.couplingOrders[name] = Math.max(0, (vertexDraft.couplingOrders[name] || 0) + delta);
+            renderVertexBuilder();
+        }
         function openVertexModal() {
-            vertexDraft.incoming = []; vertexDraft.outgoing = []; vertexDraft.couplingOrders = {};
+            vertexDraft.incoming = []; vertexDraft.outgoing = []; vertexDraft.target = 'incoming'; vertexDraft.couplingOrders = {};
             state.couplingList.forEach(c => { vertexDraft.couplingOrders[c] = (c === 'QED' ? 1 : 0); });
             document.getElementById('vertex-input-id').value = 'vertex_' + (state.customVertices.length + 1);
             document.getElementById('modal-custom-vertex').classList.remove('hidden');
+            renderVertexBuilder();
         }
         function closeVertexModal() { document.getElementById('modal-custom-vertex').classList.add('hidden'); }
-        function setVertexTargetMode(mode) { vertexDraft.target = mode; }
-        function clearVertexList(mode) { if (mode === 'incoming') vertexDraft.incoming = []; else vertexDraft.outgoing = []; }
-        function copyReactionToVertex() { vertexDraft.incoming = [...state.incoming]; vertexDraft.outgoing = [...state.outgoing]; }
         function saveCustomVertex() {
             const id = document.getElementById('vertex-input-id').value.trim() || ('vertex_' + Date.now());
-            state.customVertices.push({ id, incoming: vertexDraft.incoming, outgoing: vertexDraft.outgoing, couplingOrders: vertexDraft.couplingOrders });
+            if (!vertexDraft.incoming.length || !vertexDraft.outgoing.length) {
+                alert('A custom vertex must have at least one incoming and one outgoing leg.');
+                return;
+            }
+            if (state.customVertices.some(v => v.id === id)) {
+                alert('A custom vertex with this ID already exists.');
+                return;
+            }
+            const cloneSlot = item => item && item.isList ? {
+                isList: true, id: item.id || item.name, name: item.name || item.id, description: item.description || '', particles: (item.particles || []).map(p => ({ ...p }))
+            } : { ...item };
+            state.customVertices.push({ id, incoming: vertexDraft.incoming.map(cloneSlot), outgoing: vertexDraft.outgoing.map(cloneSlot), couplingOrders: { ...vertexDraft.couplingOrders } });
             closeVertexModal();
         }
-        function openRemoveVertexModal() { document.getElementById('modal-remove-vertex').classList.remove('hidden'); }
-        function closeRemoveVertexModal() { document.getElementById('modal-remove-vertex').classList.add('hidden'); }
-        function removeAllVertices() { state.customVertices = []; closeRemoveVertexModal(); }
 
-        function openAddListModal() { document.getElementById('modal-add-list').classList.remove('hidden'); }
+        function renderRemoveVertices() {
+            const c = document.getElementById('remove-vertex-list');
+            c.innerHTML = state.customVertices.length ? state.customVertices.map((v, idx) => `<div class="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-950 p-2"><span class="text-xs text-slate-200 truncate">${v.id}</span><button type="button" onclick="removeCustomVertexAt(${idx})" class="text-[10px] text-rose-400">Remove</button></div>`).join('') : '<div class="text-xs text-slate-600 text-center py-4">No custom vertices</div>';
+        }
+        function openRemoveVertexModal() { renderRemoveVertices(); document.getElementById('modal-remove-vertex').classList.remove('hidden'); }
+        function closeRemoveVertexModal() { document.getElementById('modal-remove-vertex').classList.add('hidden'); }
+        function removeCustomVertexAt(index) {
+            if (!Number.isInteger(index) || index < 0 || index >= state.customVertices.length) return;
+            state.customVertices.splice(index, 1);
+            renderRemoveVertices();
+            renderVertexBuilder();
+        }
+        function removeAllVertices() {
+            state.customVertices = [];
+            closeRemoveVertexModal();
+            renderVertexBuilder();
+        }
+
+        function addListElement(encodedId) {
+            const id = decodeURIComponent(encodedId);
+            const p = makeSimpleParticleRef(id);
+            if (!p || listDraft.elements.some(x => x.id === p.id)) return;
+            listDraft.elements.push(p); renderListBuilder();
+        }
+        function removeListElement(index) { listDraft.elements.splice(index, 1); renderListBuilder(); }
+        function openAddListModal() {
+            listDraft.elements = [];
+            document.getElementById('input-list-name').value = '';
+            document.getElementById('input-list-desc').value = '';
+            document.getElementById('modal-add-list').classList.remove('hidden');
+            renderListBuilder();
+        }
         function closeAddListModal() { document.getElementById('modal-add-list').classList.add('hidden'); }
-        function clearListElements() { listDraft.elements = []; }
+        function clearListElements() { listDraft.elements = []; renderListBuilder(); }
         function saveCustomList() {
             const name = document.getElementById('input-list-name').value.trim();
-            if (name) { state.customLists.push({ name, particles: [...listDraft.elements] }); }
+            const description = document.getElementById('input-list-desc').value.trim();
+            if (!name) { alert('Please enter a list name.'); return; }
+            if (!listDraft.elements.length) { alert('Add at least one particle to the list.'); return; }
+            if (state.customLists.some(l => l.name === name)) { alert('A custom list with this name already exists.'); return; }
+            state.customLists.push({ id: 'list_' + Date.now(), name, description, particles: listDraft.elements.map(p => ({ ...p })) });
+            listDraft.elements = [];
             closeAddListModal();
+            renderVertexBuilder();
         }
-        function openRemoveListModal() { document.getElementById('modal-remove-list').classList.remove('hidden'); }
+        function renderRemoveLists() {
+            const c = document.getElementById('remove-list-list');
+            c.innerHTML = state.customLists.length ? state.customLists.map((l, idx) => `<div class="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-950 p-2"><span class="text-xs text-slate-200 truncate">${l.name}</span><button type="button" onclick="removeCustomListAt(${idx})" class="text-[10px] text-rose-400">Remove</button></div>`).join('') : '<div class="text-xs text-slate-600 text-center py-4">No custom lists</div>';
+        }
+        function openRemoveListModal() { renderRemoveLists(); document.getElementById('modal-remove-list').classList.remove('hidden'); }
         function closeRemoveListModal() { document.getElementById('modal-remove-list').classList.add('hidden'); }
-        function removeAllLists() { state.customLists = []; closeRemoveListModal(); }
+        function removeCustomListAt(index) {
+            if (!Number.isInteger(index) || index < 0 || index >= state.customLists.length) return;
+            const id = state.customLists[index] && (state.customLists[index].id || state.customLists[index].name);
+            state.customLists.splice(index, 1);
+            state.customVertices.forEach(v => {
+                v.incoming = (v.incoming || []).filter(x => !x.isList || (x.id !== id && x.name !== id));
+                v.outgoing = (v.outgoing || []).filter(x => !x.isList || (x.id !== id && x.name !== id));
+            });
+            renderRemoveLists();
+            renderVertexBuilder();
+            renderListBuilder();
+        }
+        function removeAllLists() {
+            state.customLists = [];
+            state.customVertices.forEach(v => {
+                v.incoming = (v.incoming || []).filter(x => !x.isList);
+                v.outgoing = (v.outgoing || []).filter(x => !x.isList);
+            });
+            closeRemoveListModal();
+            renderVertexBuilder();
+            renderListBuilder();
+        }
 
         renderPalette();
         renderCouplingOrders();
+        renderVertexBuilder();
+        renderListBuilder();
+        renderRemoveCustomParticles();
+        renderRemoveLists();
+        renderRemoveVertices();
+        renderRemoveCouplings();
         updateUI();
     </script>
 </body>
