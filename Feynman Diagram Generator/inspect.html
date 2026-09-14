@@ -6,6 +6,7 @@
 <title>Feynman Diagram Inspector</title>
 <script src="particles.js"></script>
 <script src="image_engine.js"></script>
+<script src="latex.js"></script>
 <style>
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; min-height: 100%; background: #fff; color: #000; }
@@ -34,7 +35,29 @@
     <button id="btn-edit" type="button">Edit Mode : Off</button>
     <button id="btn-svg" type="button">Download SVG</button>
     <button id="btn-png" type="button">Download PNG</button>
+    <button id="btn-latex" type="button">LaTeX</button>
   </div>
+
+  <!-- LaTeX Modal Popup -->
+  <div id="latex-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center; padding: 20px;">
+    <div style="background: #fff; border: 1.5px solid #000; border-radius: 8px; width: min(720px, 95vw); max-height: 90vh; display: flex; flex-direction: column; padding: 18px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); font-family: Arial, sans-serif;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+        <h3 style="margin: 0; font-size: 16px; font-weight: 700;">TikZ-Feynman LaTeX Code</h3>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button id="btn-copy-latex" type="button" title="Copy to clipboard" style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 13px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            <span id="copy-btn-text">Copy</span>
+          </button>
+          <button id="btn-close-latex" type="button" style="padding: 6px 10px; font-size: 14px; font-weight: bold;">✕</button>
+        </div>
+      </div>
+      <textarea id="latex-code-text" readonly style="flex: 1; width: 100%; min-height: 320px; font-family: 'Fira Code', Consolas, Monaco, monospace; font-size: 12.5px; line-height: 1.45; border: 1px solid #000; border-radius: 4px; padding: 10px; background: #fafafa; resize: vertical; white-space: pre; outline: none;"></textarea>
+    </div>
+  </div>
+
   <div id="canvas-wrap"></div>
 </div>
 <script>
@@ -309,6 +332,8 @@
 
     return svg;
   }
+  
+
 
   function draw() {
     const wrap=document.getElementById('canvas-wrap');
@@ -459,6 +484,15 @@
       img.onerror=function(){URL.revokeObjectURL(url);alert('Unable to export PNG.');}; img.src=url;
     } catch(err){alert('Unable to export PNG: '+(err.message||err));}
   });
+
+
+  if (window.LatexEngine && typeof LatexEngine.setupLatexModal === 'function') {
+    LatexEngine.setupLatexModal(function() {
+      syncLines();
+      return diagram;
+    });
+  }
+
 
   draw();
 })();
