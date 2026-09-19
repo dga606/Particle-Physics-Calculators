@@ -204,73 +204,55 @@
       }
 
       const sc = window.__OUTPUT_SCATTERING_CONFIG || {};
-      const disabledSet = new Set(sc.disabledParticles || []);
-
-      // 1. Gather all non-disabled Standard Model particles
-      const enabledParticles = [];
-      (Particles.all || []).forEach(p => {
-        if (!disabledSet.has(p.id) && !disabledSet.has(p.symbol) && !disabledSet.has(p.name)) {
-          enabledParticles.push({
-            id: p.id,
-            name: p.name || p.id,
-            symbol: p.symbol || p.id,
-            matterType: p.matterType || 'particle',
-            mass: p.mass || 0,
-            charge: p.charge || 0,
-            spin: p.spin !== undefined ? p.spin : 0.5,
-            lepton: p.lepton || 0,
-            baryon: p.baryon || 0,
-            categories: [...(p.categories || [])],
-            generation: p.generation || null,
-            sympy_data: p.sympy_data ? { ...p.sympy_data } : {}
-          });
-        }
+      const catalog = window.__OUTPUT_CATALOG || global.Vertices.buildVertexCatalog({
+        disabledParticles: sc.disabledParticles || [],
+        customParticles: sc.customParticles || [],
+        customVertices: sc.customVertices || [],
+        customLists: sc.customLists || []
       });
 
-      // 2. Append non-disabled custom particles
-      (sc.customParticles || []).forEach(cp => {
-        if (!disabledSet.has(cp.id)) {
-          enabledParticles.push({
-            id: cp.id,
-            name: cp.symbol || cp.id,
-            symbol: cp.symbol || cp.id,
-            matterType: 'particle',
-            mass: 0,
-            charge: Number(cp.charge) || 0,
-            spin: 0.5,
-            lepton: Number(cp.lepton) || 0,
-            baryon: Number(cp.baryon) || 0,
-            categories: [cp.category || 'other', 'custom'],
-            sympy_data: cp.sympy_data ? { ...cp.sympy_data } : {}
-          });
+      // Compact diagrams referencing common element indices
+      const compactDiagrams = diagrams.map((diag, index) => ({
+        index: index + 1,
+        diagramData: {
+          order: diag.order,
+          totalOrder: diag.totalOrder,
+          noOfLoops: diag.noOfLoops,
+          inStates: (diag.inStates || []).map(s => ({
+            index: s.index,
+            particleIndex: s.particleIndex,
+            particle: s.particle,
+            pos: s.pos
+          })),
+          outStates: (diag.outStates || []).map(s => ({
+            index: s.index,
+            particleIndex: s.particleIndex,
+            particle: s.particle,
+            pos: s.pos
+          })),
+          vertices: (diag.vertices || []).map(v => ({
+            index: v.index,
+            configIndex: v.configIndex,
+            basicVertexIndex: v.basicVertexIndex,
+            order: v.order,
+            sympy_data: v.sympy_data,
+            pos: v.pos
+          })),
+          lines: (diag.lines || []).map(l => ({
+            index: l.index,
+            particleIndex: l.particleIndex,
+            particle: l.particle,
+            particleType: l.particleType,
+            shape: l.shape,
+            sagitta: l.sagitta,
+            inPos: l.inPos,
+            outPos: l.outPos,
+            inPort: l.inPort,
+            outPort: l.outPort
+          }))
         }
-        if (cp.isPair && !disabledSet.has(cp.id + '_bar')) {
-          enabledParticles.push({
-            id: cp.id + '_bar',
-            name: cp.antiSymbol || (cp.symbol + '̄'),
-            symbol: cp.antiSymbol || (cp.symbol + '̄'),
-            matterType: 'antiparticle',
-            mass: 0,
-            charge: -(Number(cp.charge) || 0),
-            spin: 0.5,
-            lepton: -(Number(cp.lepton) || 0),
-            baryon: -(Number(cp.baryon) || 0),
-            categories: [cp.category || 'other', 'custom', 'antimatter'],
-            sympy_data: cp.sympy_data ? { ...cp.sympy_data } : {}
-          });
-        }
-      });
-
-      // 3. Format custom vertices with sympy_data
-      const customVertices = (sc.customVertices || []).map(v => ({
-        id: v.id || '',
-        incoming: v.incoming || [],
-        outgoing: v.outgoing || [],
-        couplingOrders: { ...(v.couplingOrders || {}) },
-        sympy_data: v.sympy_data ? { ...v.sympy_data } : {}
       }));
 
-      // 4. Assemble final JSON payload
       const payload = {
         exportData: { author: 'dga606' },
         version: 2,
@@ -288,14 +270,20 @@
             includeTadpoles: !!sc.includeTadpoles,
             laws: sc.laws || { charge: true, lepton: true, baryon: true }
           },
-          particles: enabledParticles,
-          customVertices: customVertices,
+          particles: catalog.particles,
+          basicVertices: catalog.basicVertices,
+          vertexConfigurations: catalog.vertexConfigurations.map(c => ({
+            index: c.index,
+            basicVertexIndex: c.basicVertexIndex,
+            name: c.name,
+            in: c.in,
+            out: c.out,
+            order: c.order,
+            sympy_data: c.sympy_data
+          })),
           customLists: sc.customLists || []
         },
-        diagrams: diagrams.map((diagramData, index) => ({
-          index: index + 1,
-          diagramData
-        }))
+        diagrams: compactDiagrams
       };
 
       const originalHtml = button.innerHTML;
@@ -393,24 +381,60 @@
     // ------------------------------------------------------------------------
     window.openDiagramEditor = function(diagramData) {
       const shared = window.__DIAGRAM_SHARED_DATA || {};
+
+      // 1. Build a lean, non-circular diagram payload
       const payload = {
-        version: 1,
+        version: 2,
         createdAt: Date.now(),
-        diagramData,
-        sharedData: shared
+        diagramData: diagramData,
+        sharedData: {
+          formulaText: shared.formulaText || '',
+          customParticles: shared.customParticles || []
+        }
       };
+
+      // Set fallback on current window for direct opener access
+      window.__INSPECT_TARGET_PAYLOAD__ = payload;
+
       const token = 'feynman_inspect_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+
+      // 2. Safe stringify (strips accidental circular references automatically)
+      const seen = new WeakSet();
+      let serialized = null;
       try {
-        localStorage.setItem(token, JSON.stringify(payload));
+        serialized = JSON.stringify(payload, (key, value) => {
+          if (typeof value === 'object' && value !== null) {
+            if (seen.has(value)) return undefined;
+            seen.add(value);
+          }
+          return value;
+        });
       } catch (err) {
-        alert('Unable to open diagram inspector: browser local storage is unavailable.');
-        return;
+        console.error('Inspection JSON stringify error:', err);
       }
+
+      // 3. Store in sessionStorage and localStorage with cleanup
+      if (serialized) {
+        try { sessionStorage.setItem(token, serialized); } catch (_) {}
+        try {
+          for (let i = localStorage.length - 1; i >= 0; i--) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith('feynman_inspect_')) localStorage.removeItem(k);
+          }
+          localStorage.setItem(token, serialized);
+        } catch (_) {}
+      }
+
+      // 4. Open inspector window and assign payload directly
       const editorWindow = window.open('inspect.html#' + encodeURIComponent(token), '_blank');
       if (!editorWindow) {
-        localStorage.removeItem(token);
-        alert('The browser blocked the new tab. Please allow pop-ups for this site.');
+        alert('The browser blocked opening the inspector tab. Please allow pop-ups for this site.');
+        return;
       }
+
+      try {
+        editorWindow.__DIAGRAM_PAYLOAD__ = payload;
+      } catch (_) {}
     };
 
     window.addEventListener('DOMContentLoaded', () => {

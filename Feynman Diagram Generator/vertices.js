@@ -151,9 +151,174 @@
     return results;
   }
 
-  const Vertices = { theoryVertices, getVertexConfigurations, expandBasicVertex, isParticleBlacklisted };
+
+
+
+  function buildVertexCatalog({ disabledParticles = [], customParticles = [], customVertices = [], customLists = [] } = {}) {
+    const disabledSet = new Set(
+      (disabledParticles || []).map(p => (typeof p === 'object' && p ? p.id : String(p)).trim().toLowerCase())
+    );
+
+    function isIdDisabled(id) {
+      if (!id) return false;
+      return disabledSet.has(String(id).trim().toLowerCase());
+    }
+
+    const particles = [];
+    const particleIdToIndex = new Map();
+
+    function addParticle(p) {
+      if (!p || !p.id || isIdDisabled(p.id)) return;
+      const cleanId = String(p.id).trim().toLowerCase();
+      if (particleIdToIndex.has(cleanId)) return;
+
+      const idx = particles.length;
+      particleIdToIndex.set(cleanId, idx);
+      if (p.id) particleIdToIndex.set(p.id, idx);
+      if (p.symbol) particleIdToIndex.set(String(p.symbol).trim().toLowerCase(), idx);
+
+      particles.push({
+        index: idx,
+        id: p.id,
+        name: p.name || p.id,
+        symbol: p.symbol || p.id,
+        matterType: p.matterType || 'particle',
+        mass: p.mass || 0,
+        charge: p.charge || 0,
+        spin: p.spin !== undefined ? p.spin : 0.5,
+        lepton: p.lepton || 0,
+        baryon: p.baryon || 0,
+        categories: [...(p.categories || [])],
+        generation: p.generation || null,
+        sympy_data: (p.sympy_data && typeof p.sympy_data === 'object' && !Array.isArray(p.sympy_data))
+          ? { ...p.sympy_data }
+          : {}
+      });
+    }
+
+    (Particles.all || []).forEach(addParticle);
+
+    (customParticles || []).forEach(cp => {
+      addParticle({
+        id: cp.id,
+        name: cp.symbol || cp.id,
+        symbol: cp.symbol || cp.id,
+        matterType: 'particle',
+        mass: 0,
+        charge: Number(cp.charge) || 0,
+        spin: 0.5,
+        lepton: Number(cp.lepton) || 0,
+        baryon: Number(cp.baryon) || 0,
+        categories: [cp.category || 'other', 'custom'],
+        sympy_data: cp.sympy_data || {}
+      });
+      if (cp.isPair) {
+        addParticle({
+          id: cp.id + '_bar',
+          name: cp.antiSymbol || (cp.symbol + '̄'),
+          symbol: cp.antiSymbol || (cp.symbol + '̄'),
+          matterType: 'antiparticle',
+          mass: 0,
+          charge: -(Number(cp.charge) || 0),
+          spin: 0.5,
+          lepton: -(Number(cp.lepton) || 0),
+          baryon: -(Number(cp.baryon) || 0),
+          categories: [cp.category || 'other', 'custom', 'antimatter'],
+          sympy_data: cp.sympy_data || {}
+        });
+      }
+    });
+
+    const customListsMap = {};
+    (customLists || []).forEach(l => {
+      customListsMap[l.id] = l;
+      customListsMap[l.name] = l;
+    });
+
+    const basicVertices = [];
+    const vertexConfigurations = [];
+
+    function processRawBasicVertex(rawVertex, theoryName) {
+      const concreteList = expandBasicVertex(rawVertex, customListsMap);
+      for (const concrete of concreteList) {
+        const allLegs = [...concrete.in, ...concrete.out];
+        if (allLegs.some(p => !p || isIdDisabled(p.id))) continue;
+
+        const bvIndex = basicVertices.length;
+        const inIndices = concrete.in.map(p => particleIdToIndex.get(p.id.toLowerCase()));
+        const outIndices = concrete.out.map(p => particleIdToIndex.get(p.id.toLowerCase()));
+
+        const bvRecord = {
+          index: bvIndex,
+          name: `${concrete.in.map(p => p.symbol || p.id).join(' + ')} -> ${concrete.out.map(p => p.symbol || p.id).join(' + ')}`,
+          theory: theoryName,
+          in: inIndices,
+          out: outIndices,
+          order: { ...(concrete.order || {}) },
+          sympy_data: (concrete.sympy_data && typeof concrete.sympy_data === 'object' && !Array.isArray(concrete.sympy_data))
+            ? { ...concrete.sympy_data }
+            : {}
+        };
+        basicVertices.push(bvRecord);
+
+        const configs = getVertexConfigurations(concrete, disabledParticles, customListsMap);
+        for (const cfg of configs) {
+          const cfgIndex = vertexConfigurations.length;
+          const cfgInIndices = cfg.in.map(p => particleIdToIndex.get(p.id.toLowerCase()));
+          const cfgOutIndices = cfg.out.map(p => particleIdToIndex.get(p.id.toLowerCase()));
+
+          vertexConfigurations.push({
+            index: cfgIndex,
+            basicVertexIndex: bvIndex,
+            name: `${cfg.in.map(p => p.symbol || p.id).join(' + ')} -> ${cfg.out.map(p => p.symbol || p.id).join(' + ')}`,
+            in: cfgInIndices,
+            out: cfgOutIndices,
+            order: { ...(cfg.order || {}) },
+            sympy_data: (cfg.sympy_data && typeof cfg.sympy_data === 'object' && !Array.isArray(cfg.sympy_data))
+              ? { ...cfg.sympy_data }
+              : { ...bvRecord.sympy_data }
+          });
+        }
+      }
+    }
+
+    ['qed', 'qcd', 'ew', 'higgs'].forEach(th => {
+      (theoryVertices[th] || []).forEach(raw => processRawBasicVertex(raw, th.toUpperCase()));
+    });
+
+    (customVertices || []).forEach(custV => {
+      const orderObj = {};
+      for (const [ck, cv] of Object.entries(custV.couplingOrders || {})) {
+        orderObj[ck] = cv;
+      }
+      const template = {
+        id: custV.id,
+        in: (custV.incoming || []).map(p => p.isList ? p : (Particles.get(p.id) || p)),
+        out: (custV.outgoing || []).map(p => p.isList ? p : (Particles.get(p.id) || p)),
+        order: orderObj,
+        sympy_data: custV.sympy_data || {}
+      };
+      processRawBasicVertex(template, 'CUSTOM');
+    });
+
+    return {
+      particles,
+      particleIdToIndex,
+      basicVertices,
+      vertexConfigurations
+    };
+  }
+
+  const Vertices = {
+    theoryVertices,
+    getVertexConfigurations,
+    expandBasicVertex,
+    isParticleBlacklisted,
+    buildVertexCatalog
+  };
 
   global.theoryVertices = theoryVertices;
   global.getVertexConfigurations = getVertexConfigurations;
+  global.buildVertexCatalog = buildVertexCatalog;
   global.Vertices = Vertices;
 })(typeof window !== 'undefined' ? window : globalThis);

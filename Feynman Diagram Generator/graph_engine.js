@@ -460,42 +460,23 @@
       return true;
     };
 
-    const customListsMap = {};
-    (options.customLists || []).forEach(l => {
-      customListsMap[l.id] = l;
-      customListsMap[l.name] = l;
+    const catalog = options.catalog || global.Vertices.buildVertexCatalog({
+      disabledParticles: options.blacklist || [],
+      customParticles: options.customParticles || [],
+      customVertices: options.customVertices || [],
+      customLists: options.customLists || []
     });
 
-    const allowedVertexConfigs = [];
-    ['qed', 'qcd', 'ew', 'higgs'].forEach(th => {
-      (theoryVertices[th] || []).forEach(basic => {
-        getVertexConfigurations(basic, options.blacklist || [], customListsMap).forEach(cfg => {
-          if (isTheoryAllowed(cfg.order)) allowedVertexConfigs.push(cfg);
-        });
-      });
-    });
-
-    (options.customVertices || []).forEach(custV => {
-      const orderObj = {};
-      for (const [ck, cv] of Object.entries(custV.couplingOrders || {})) {
-        orderObj[normalizeTheoryName(ck)] = cv;
-      }
-      const template = {
-        id: custV.id,
-        in: (custV.incoming || []).map(p => p.isList ? p : (Particles.get(p.id) || p)),
-        out: (custV.outgoing || []).map(p => p.isList ? p : (Particles.get(p.id) || p)),
-        order: orderObj,
-        sympy_data: (custV.sympy_data && typeof custV.sympy_data === 'object' && !Array.isArray(custV.sympy_data))
-          ? { ...custV.sympy_data }
-          : {}
-      };
-      getVertexConfigurations(template, options.blacklist || [], customListsMap).forEach(cfg => {
-        if (isTheoryAllowed(cfg.order)) {
-          cfg.sympy_data = template.sympy_data ? { ...template.sympy_data } : {};
-          allowedVertexConfigs.push(cfg);
-        }
-      });
-    });
+    const allowedVertexConfigs = (catalog.vertexConfigurations || [])
+      .filter(cfg => isTheoryAllowed(cfg.order))
+      .map(cfg => ({
+        index: cfg.index,
+        basicVertexIndex: cfg.basicVertexIndex,
+        in: (cfg.in || []).map(idx => Particles.get(catalog.particles[idx].id)),
+        out: (cfg.out || []).map(idx => Particles.get(catalog.particles[idx].id)),
+        order: cfg.order,
+        sympy_data: cfg.sympy_data
+      }));
 
     const seenSignatures = new Set();
     return await searchDiagramsForExactTotalOrder({

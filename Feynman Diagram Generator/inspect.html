@@ -64,16 +64,27 @@
 (function() {
   'use strict';
 
+  // Multi-channel retrieval: memory -> sessionStorage -> localStorage -> window.opener
+  let payload = window.__DIAGRAM_PAYLOAD__ || null;
   const token = decodeURIComponent((location.hash || '').replace(/^#/, ''));
-  let payload = null;
-  try {
-    if (!token) throw new Error('No inspector data token was provided.');
-    const raw = localStorage.getItem(token);
-    if (!raw) throw new Error('The diagram data could not be found in local storage.');
-    payload = JSON.parse(raw);
-    localStorage.removeItem(token);
-  } catch (err) {
-    document.getElementById('canvas-wrap').innerHTML = '<div id="error"><strong>Unable to load diagram.</strong>\n' + String(err.message || err) + '</div>';
+
+  if (!payload && token) {
+    try {
+      const raw = sessionStorage.getItem(token) || localStorage.getItem(token);
+      if (raw) {
+        payload = JSON.parse(raw);
+        try { localStorage.removeItem(token); } catch (_) {}
+        try { sessionStorage.removeItem(token); } catch (_) {}
+      }
+    } catch (_) {}
+  }
+
+  if (!payload && window.opener && window.opener.__INSPECT_TARGET_PAYLOAD__) {
+    payload = window.opener.__INSPECT_TARGET_PAYLOAD__;
+  }
+
+  if (!payload) {
+    document.getElementById('canvas-wrap').innerHTML = '<div id="error"><strong>Unable to load diagram.</strong>\nNo diagram data found in storage or parent window.</div>';
     return;
   }
 
@@ -94,7 +105,14 @@
 
   function clonePos(pos) { return pos ? { x:Number(pos.x), y:Number(pos.y) } : null; }
 
-  function makeParticle(info) {
+  
+
+  function makeParticle(infoOrIndex) {
+    if (infoOrIndex === null || infoOrIndex === undefined) return null;
+    let info = infoOrIndex;
+    if (typeof infoOrIndex === 'number' && payload.common && Array.isArray(payload.common.particles)) {
+      info = payload.common.particles[infoOrIndex];
+    }
     if (!info) return null;
     const registered = Particles.get(info.id || '');
     if (registered) return registered;
@@ -107,22 +125,27 @@
       name: info.name || info.id || '',
       symbol: info.symbol || info.name || info.id || '',
       matterType: info.matterType || 'particle',
-      categories: custom ? [custom.category || 'other', 'custom'] : [],
+      categories: custom ? [custom.category || 'other', 'custom'] : (info.categories || []),
       aliases: [info.id || '', info.symbol || '', info.name || '']
     };
     fallback.hasCategory = function(cat) { return this.categories.includes(cat); };
-    Object.defineProperty(fallback, 'isSelfConjugate', { value:fallback.matterType === 'both', enumerable:false });
+    Object.defineProperty(fallback, 'isSelfConjugate', { value: fallback.matterType === 'both', enumerable: false });
     return fallback;
   }
 
   const inStates = (diagramData.inStates || []).map(function(n) {
-    return { index:n.index, type:'inState', particle:makeParticle(n.particle), pos:clonePos(n.pos) };
+    return { index: n.index, type: 'inState', particle: makeParticle(n.particleIndex !== undefined ? n.particleIndex : n.particle), pos: clonePos(n.pos) };
   });
   const outStates = (diagramData.outStates || []).map(function(n) {
-    return { index:n.index, type:'outState', particle:makeParticle(n.particle), pos:clonePos(n.pos) };
+    return { index: n.index, type: 'outState', particle: makeParticle(n.particleIndex !== undefined ? n.particleIndex : n.particle), pos: clonePos(n.pos) };
   });
   const vertices = (diagramData.vertices || []).map(function(n) {
-    return { index:n.index, type:'vertex', order:Object.assign({}, n.order || {}), pos:clonePos(n.pos) };
+    let vOrder = n.order;
+    if ((!vOrder || Object.keys(vOrder).length === 0) && n.configIndex !== undefined && payload.common && Array.isArray(payload.common.vertexConfigurations)) {
+      const cfg = payload.common.vertexConfigurations[n.configIndex];
+      if (cfg) vOrder = cfg.order;
+    }
+    return { index: n.index, type: 'vertex', order: Object.assign({}, vOrder || {}), pos: clonePos(n.pos) };
   });
 
   function resolvePort(ref) {
@@ -135,17 +158,21 @@
 
   const lines = (diagramData.lines || []).map(function(l) {
     return {
-      index:l.index,
-      particle:makeParticle(l.particle),
-      particleType:l.particleType || (l.particle && l.particle.matterType) || 'particle',
-      shape:l.shape || 'straight',
-      sagitta:Number(l.sagitta || 0),
-      inPos:clonePos(l.inPos),
-      outPos:clonePos(l.outPos),
-      inPort:resolvePort(l.inPort),
-      outPort:resolvePort(l.outPort)
+      index: l.index,
+      particle: makeParticle(l.particleIndex !== undefined ? l.particleIndex : l.particle),
+      particleType: l.particleType || (l.particle && l.particle.matterType) || 'particle',
+      shape: l.shape || 'straight',
+      sagitta: Number(l.sagitta || 0),
+      inPos: clonePos(l.inPos),
+      outPos: clonePos(l.outPos),
+      inPort: resolvePort(l.inPort),
+      outPort: resolvePort(l.outPort)
     };
   });
+
+
+
+
 
   const diagram = {
     order:Object.assign({}, diagramData.order || {}),

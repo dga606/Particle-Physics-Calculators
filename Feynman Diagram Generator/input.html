@@ -46,6 +46,11 @@
                         <i class="fa-solid fa-file-import text-[11px] text-teal-400"></i>
                         <span>Import Preset</span>
                     </button>
+                    <button type="button" onclick="importDiagrams()" title="Open diagrams from JSON file" 
+                        class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition-all flex items-center gap-1.5 shadow-sm">
+                        <i class="fa-solid fa-diagram-project text-[11px] text-sky-400"></i>
+                        <span>Import Diagrams</span>
+                    </button>
                     <button type="button" onclick="resetAllScattering()" title="Reset scattering input fields" 
                         class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-rose-950/50 hover:text-rose-300 text-slate-400 border border-slate-800 transition-all flex items-center gap-1.5 shadow-sm">
                         <i class="fa-solid fa-rotate-right text-[11px]"></i>
@@ -590,59 +595,11 @@
         };
 
         function exportPreset() {
-            const disabledSet = state.disabledParticles;
-            const enabledParticles = [];
-
-            (Particles.all || []).forEach(p => {
-                if (!disabledSet.has(p.id) && !disabledSet.has(p.symbol) && !disabledSet.has(p.name)) {
-                    enabledParticles.push({
-                        id: p.id,
-                        name: p.name || p.id,
-                        symbol: p.symbol || p.id,
-                        matterType: p.matterType || 'particle',
-                        mass: p.mass || 0,
-                        charge: p.charge || 0,
-                        spin: p.spin !== undefined ? p.spin : 0.5,
-                        lepton: p.lepton || 0,
-                        baryon: p.baryon || 0,
-                        categories: [...(p.categories || [])],
-                        generation: p.generation || null,
-                        sympy_data: p.sympy_data ? { ...p.sympy_data } : {}
-                    });
-                }
-            });
-
-            (state.customParticles || []).forEach(cp => {
-                if (!disabledSet.has(cp.id)) {
-                    enabledParticles.push({
-                        id: cp.id,
-                        name: cp.symbol || cp.id,
-                        symbol: cp.symbol || cp.id,
-                        matterType: 'particle',
-                        mass: 0,
-                        charge: Number(cp.charge) || 0,
-                        spin: 0.5,
-                        lepton: Number(cp.lepton) || 0,
-                        baryon: Number(cp.baryon) || 0,
-                        categories: [cp.category || 'other', 'custom'],
-                        sympy_data: cp.sympy_data ? { ...cp.sympy_data } : {}
-                    });
-                }
-                if (cp.isPair && !disabledSet.has(cp.id + '_bar')) {
-                    enabledParticles.push({
-                        id: cp.id + '_bar',
-                        name: cp.antiSymbol || (cp.symbol + '̄'),
-                        symbol: cp.antiSymbol || (cp.symbol + '̄'),
-                        matterType: 'antiparticle',
-                        mass: 0,
-                        charge: -(Number(cp.charge) || 0),
-                        spin: 0.5,
-                        lepton: -(Number(cp.lepton) || 0),
-                        baryon: -(Number(cp.baryon) || 0),
-                        categories: [cp.category || 'other', 'custom', 'antimatter'],
-                        sympy_data: cp.sympy_data ? { ...cp.sympy_data } : {}
-                    });
-                }
+            const catalog = Vertices.buildVertexCatalog({
+                disabledParticles: Array.from(state.disabledParticles),
+                customParticles: state.customParticles,
+                customVertices: state.customVertices,
+                customLists: state.customLists
             });
 
             const exportPayload = {
@@ -662,7 +619,17 @@
                         includeTadpoles: state.includeTadpoles,
                         laws: { ...state.laws }
                     },
-                    particles: enabledParticles,
+                    particles: catalog.particles,
+                    basicVertices: catalog.basicVertices,
+                    vertexConfigurations: catalog.vertexConfigurations.map(c => ({
+                        index: c.index,
+                        basicVertexIndex: c.basicVertexIndex,
+                        name: c.name,
+                        in: c.in,
+                        out: c.out,
+                        order: c.order,
+                        sympy_data: c.sympy_data
+                    })),
                     customParticles: [...state.customParticles],
                     customVertices: (state.customVertices || []).map(v => ({
                         ...v,
@@ -719,6 +686,17 @@
                         }
                         if (sc.laws) state.laws = { ...state.laws, ...sc.laws };
 
+                        // Reconstruct disabled particles based on which particles are in common.particles
+                        if (loaded.common && Array.isArray(loaded.common.particles)) {
+                            const enabledIds = new Set(loaded.common.particles.map(p => String(p.id).trim().toLowerCase()));
+                            state.disabledParticles.clear();
+                            (Particles.all || []).forEach(p => {
+                                if (!enabledIds.has(String(p.id).trim().toLowerCase())) {
+                                    state.disabledParticles.add(p.id);
+                                }
+                            });
+                        }
+
                         const common = loaded.common || {};
                         const customParts = common.customParticles || loaded.customParticles;
                         if (Array.isArray(customParts)) {
@@ -757,6 +735,60 @@
             };
             input.click();
         }
+
+
+        function importDiagrams() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = e => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = event => {
+                    try {
+                        const loaded = JSON.parse(event.target.result);
+                        if (!loaded || !Array.isArray(loaded.diagrams) || loaded.diagrams.length === 0) {
+                            alert('Invalid diagrams JSON file: no diagrams found in file.');
+                            return;
+                        }
+
+                        const token = 'feynman_import_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+
+                        // Prune old import tokens from storage
+                        try {
+                            for (let i = sessionStorage.length - 1; i >= 0; i--) {
+                                const k = sessionStorage.key(i);
+                                if (k && k.startsWith('feynman_import_')) sessionStorage.removeItem(k);
+                            }
+                            for (let i = localStorage.length - 1; i >= 0; i--) {
+                                const k = localStorage.key(i);
+                                if (k && k.startsWith('feynman_import_')) localStorage.removeItem(k);
+                            }
+                        } catch (_) {}
+
+                        // Multi-channel caching
+                        try { sessionStorage.setItem(token, event.target.result); } catch (_) {}
+                        try { localStorage.setItem(token, event.target.result); } catch (_) {}
+                        window.__IMPORTED_DIAGRAMS_TARGET__ = loaded;
+
+                        const win = window.open('output.html#import:' + encodeURIComponent(token), '_blank');
+                        if (!win) {
+                            alert('The browser blocked opening output.html. Please allow pop-ups for this site.');
+                            return;
+                        }
+                        try { win.__IMPORTED_DIAGRAMS_DATA__ = loaded; } catch (_) {}
+                    } catch (err) {
+                        alert('Failed to parse JSON file: ' + (err.message || err));
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+
+        
 
         function setTargetMode(mode) {
             state.targetMode = mode;

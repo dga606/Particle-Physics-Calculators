@@ -629,9 +629,19 @@
    * Captures all diagram geometry, positions, vertices, and lines without circular refs
    */
   function extractDiagramData(diag) {
+    const catalog = (typeof window !== 'undefined' && window.__OUTPUT_CATALOG) ? window.__OUTPUT_CATALOG : null;
+    const pMap = catalog ? catalog.particleIdToIndex : null;
+
+    function getParticleIndex(p) {
+      if (!p || !pMap) return null;
+      const id = String(p.id || '').trim().toLowerCase();
+      return pMap.has(id) ? pMap.get(id) : null;
+    }
+
     const inStates = (diag.inStates || []).map((is, idx) => ({
       index: idx,
       type: 'inState',
+      particleIndex: getParticleIndex(is.particle),
       particle: extractParticleInfo(is.particle),
       pos: is.pos ? { x: is.pos.x, y: is.pos.y } : null
     }));
@@ -639,6 +649,7 @@
     const outStates = (diag.outStates || []).map((os, idx) => ({
       index: idx,
       type: 'outState',
+      particleIndex: getParticleIndex(os.particle),
       particle: extractParticleInfo(os.particle),
       pos: os.pos ? { x: os.pos.x, y: os.pos.y } : null
     }));
@@ -646,6 +657,8 @@
     const vertices = (diag.vertices || []).map((v, idx) => ({
       index: idx,
       type: 'vertex',
+      configIndex: (v.type && v.type.index !== undefined) ? v.type.index : null,
+      basicVertexIndex: (v.type && v.type.basicVertexIndex !== undefined) ? v.type.basicVertexIndex : null,
       pos: v.pos ? { x: v.pos.x, y: v.pos.y } : null,
       order: v.type && v.type.order ? { ...v.type.order } : {},
       sympy_data: v.sympy_data ? { ...v.sympy_data } : {}
@@ -676,6 +689,7 @@
 
       return {
         index: idx,
+        particleIndex: getParticleIndex(l.particle),
         particle: extractParticleInfo(l.particle),
         particleType: l.particleType || (l.particle ? l.particle.matterType : 'particle'),
         shape: l.shape || 'straight',
