@@ -34,11 +34,14 @@
   }
 
   class Vertex {
-    constructor(type, inLines = []) {
+    constructor(type, inLines = [], sympy_data = {}) {
       this.type = type;
       this.inLines = [...inLines];
       this.outLines = [];
       this.pos = null;
+      this.sympy_data = (sympy_data && typeof sympy_data === 'object' && !Array.isArray(sympy_data))
+        ? { ...sympy_data }
+        : ((type && type.sympy_data && typeof type.sympy_data === 'object') ? { ...type.sympy_data } : {});
     }
     generateOutLines() {
       this.outLines = (this.type.out || []).map(p => new Lines(p, this, null, 'straight'));
@@ -86,7 +89,7 @@
       });
 
       copy.vertices = this.vertices.map(v => {
-        const c = new Vertex(v.type, []);
+        const c = new Vertex(v.type, [], { ...(v.sympy_data || {}) });
         c.pos = v.pos ? { ...v.pos } : null;
         vertexMap.set(v, c);
         return c;
@@ -402,7 +405,7 @@
               }
               if (budgetExceeded) continue;
 
-              const vertex = new Vertex(vType, chosen.slice());
+              const vertex = new Vertex(vType, chosen.slice(), vType.sympy_data || {});
               const newOutLines = vertex.generateOutLines();
               if (!Array.isArray(newOutLines) || newOutLines.length === 0) continue;
 
@@ -478,12 +481,19 @@
         orderObj[normalizeTheoryName(ck)] = cv;
       }
       const template = {
+        id: custV.id,
         in: (custV.incoming || []).map(p => p.isList ? p : (Particles.get(p.id) || p)),
         out: (custV.outgoing || []).map(p => p.isList ? p : (Particles.get(p.id) || p)),
-        order: orderObj
+        order: orderObj,
+        sympy_data: (custV.sympy_data && typeof custV.sympy_data === 'object' && !Array.isArray(custV.sympy_data))
+          ? { ...custV.sympy_data }
+          : {}
       };
       getVertexConfigurations(template, options.blacklist || [], customListsMap).forEach(cfg => {
-        if (isTheoryAllowed(cfg.order)) allowedVertexConfigs.push(cfg);
+        if (isTheoryAllowed(cfg.order)) {
+          cfg.sympy_data = template.sympy_data ? { ...template.sympy_data } : {};
+          allowedVertexConfigs.push(cfg);
+        }
       });
     });
 

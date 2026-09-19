@@ -555,6 +555,7 @@
             outgoing: [],
             couplingList: ["QED", "QCD", "Electro-Weak", "Higgs"],
             couplingOrders: { "QED": 2, "QCD": 0, "Electro-Weak": 0, "Higgs": 0 },
+            disabledCouplings: [],
             customParticles: [],
             customVertices: [],
             customLists: [],
@@ -575,6 +576,7 @@
                 outgoing: [...state.outgoing],
                 couplingOrders: { ...state.couplingOrders },
                 couplingList: [...state.couplingList],
+                disabledCouplings: [...state.disabledCouplings],
                 customParticles: [...state.customParticles],
                 customVertices: [...state.customVertices],
                 customLists: [...state.customLists],
@@ -588,7 +590,89 @@
         };
 
         function exportPreset() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
+            const disabledSet = state.disabledParticles;
+            const enabledParticles = [];
+
+            (Particles.all || []).forEach(p => {
+                if (!disabledSet.has(p.id) && !disabledSet.has(p.symbol) && !disabledSet.has(p.name)) {
+                    enabledParticles.push({
+                        id: p.id,
+                        name: p.name || p.id,
+                        symbol: p.symbol || p.id,
+                        matterType: p.matterType || 'particle',
+                        mass: p.mass || 0,
+                        charge: p.charge || 0,
+                        spin: p.spin !== undefined ? p.spin : 0.5,
+                        lepton: p.lepton || 0,
+                        baryon: p.baryon || 0,
+                        categories: [...(p.categories || [])],
+                        generation: p.generation || null,
+                        sympy_data: p.sympy_data ? { ...p.sympy_data } : {}
+                    });
+                }
+            });
+
+            (state.customParticles || []).forEach(cp => {
+                if (!disabledSet.has(cp.id)) {
+                    enabledParticles.push({
+                        id: cp.id,
+                        name: cp.symbol || cp.id,
+                        symbol: cp.symbol || cp.id,
+                        matterType: 'particle',
+                        mass: 0,
+                        charge: Number(cp.charge) || 0,
+                        spin: 0.5,
+                        lepton: Number(cp.lepton) || 0,
+                        baryon: Number(cp.baryon) || 0,
+                        categories: [cp.category || 'other', 'custom'],
+                        sympy_data: cp.sympy_data ? { ...cp.sympy_data } : {}
+                    });
+                }
+                if (cp.isPair && !disabledSet.has(cp.id + '_bar')) {
+                    enabledParticles.push({
+                        id: cp.id + '_bar',
+                        name: cp.antiSymbol || (cp.symbol + '̄'),
+                        symbol: cp.antiSymbol || (cp.symbol + '̄'),
+                        matterType: 'antiparticle',
+                        mass: 0,
+                        charge: -(Number(cp.charge) || 0),
+                        spin: 0.5,
+                        lepton: -(Number(cp.lepton) || 0),
+                        baryon: -(Number(cp.baryon) || 0),
+                        categories: [cp.category || 'other', 'custom', 'antimatter'],
+                        sympy_data: cp.sympy_data ? { ...cp.sympy_data } : {}
+                    });
+                }
+            });
+
+            const exportPayload = {
+                exportData: { author: 'dga606' },
+                version: 2,
+                createdAt: Date.now(),
+                common: {
+                    scattering: {
+                        incoming: [...state.incoming],
+                        outgoing: [...state.outgoing],
+                        couplingOrders: { ...state.couplingOrders },
+                        couplingList: [...state.couplingList],
+                        disabledCouplings: [...state.disabledCouplings],
+                        maxLoops: state.maxLoops,
+                        minTotalOrder: state.minTotalOrder,
+                        includeDisconnected: state.includeDisconnected,
+                        includeTadpoles: state.includeTadpoles,
+                        laws: { ...state.laws }
+                    },
+                    particles: enabledParticles,
+                    customParticles: [...state.customParticles],
+                    customVertices: (state.customVertices || []).map(v => ({
+                        ...v,
+                        sympy_data: v.sympy_data ? { ...v.sympy_data } : {}
+                    })),
+                    customLists: [...state.customLists]
+                }
+            };
+
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportPayload, null, 2));
             const downloadAnchor = document.createElement('a');
             downloadAnchor.setAttribute("href", dataStr);
             downloadAnchor.setAttribute("download", "feynman_preset.json");
@@ -608,22 +692,65 @@
                 reader.onload = event => {
                     try {
                         const loaded = JSON.parse(event.target.result);
-                        if (loaded.incoming) state.incoming = loaded.incoming;
-                        if (loaded.outgoing) state.outgoing = loaded.outgoing;
-                        if (loaded.couplingOrders) state.couplingOrders = loaded.couplingOrders;
-                        if (loaded.maxLoops !== undefined) {
-                            state.maxLoops = Math.max(0, parseInt(loaded.maxLoops, 10) || 0);
+                        const sc = (loaded.common && loaded.common.scattering)
+                            ? loaded.common.scattering
+                            : (loaded.scatteringConfig || loaded);
+
+                        if (sc.incoming) state.incoming = sc.incoming;
+                        if (sc.outgoing) state.outgoing = sc.outgoing;
+                        if (sc.couplingOrders) state.couplingOrders = sc.couplingOrders;
+                        if (sc.couplingList) state.couplingList = sc.couplingList;
+                        if (Array.isArray(sc.disabledCouplings)) state.disabledCouplings = [...sc.disabledCouplings];
+                        if (sc.maxLoops !== undefined) {
+                            state.maxLoops = Math.max(0, parseInt(sc.maxLoops, 10) || 0);
                             document.getElementById('max-loops').value = state.maxLoops;
                         }
-                        if (loaded.minTotalOrder !== undefined) {
-                            state.minTotalOrder = Math.max(0, parseInt(loaded.minTotalOrder, 10) || 0);
+                        if (sc.minTotalOrder !== undefined) {
+                            state.minTotalOrder = Math.max(0, parseInt(sc.minTotalOrder, 10) || 0);
                             document.getElementById('min-total-order').value = state.minTotalOrder;
                         }
+                        if (sc.includeDisconnected !== undefined) {
+                            state.includeDisconnected = !!sc.includeDisconnected;
+                            document.getElementById('chk-disconnected').checked = state.includeDisconnected;
+                        }
+                        if (sc.includeTadpoles !== undefined) {
+                            state.includeTadpoles = !!sc.includeTadpoles;
+                            document.getElementById('chk-tadpoles').checked = state.includeTadpoles;
+                        }
+                        if (sc.laws) state.laws = { ...state.laws, ...sc.laws };
+
+                        const common = loaded.common || {};
+                        const customParts = common.customParticles || loaded.customParticles;
+                        if (Array.isArray(customParts)) {
+                            state.customParticles = customParts.map(p => ({
+                                ...p,
+                                sympy_data: p.sympy_data ? { ...p.sympy_data } : {}
+                            }));
+                            state.customParticles.forEach(p => {
+                                try { Particles.registerCustom(p); } catch (_) {}
+                            });
+                        }
+
+                        const customVerts = common.customVertices || loaded.customVertices;
+                        if (Array.isArray(customVerts)) {
+                            state.customVertices = customVerts.map(v => ({
+                                ...v,
+                                sympy_data: v.sympy_data ? { ...v.sympy_data } : {}
+                            }));
+                        }
+
+                        const customLists = common.customLists || loaded.customLists;
+                        if (Array.isArray(customLists)) {
+                            state.customLists = customLists;
+                        }
+
                         renderPalette();
                         renderCouplingOrders();
+                        renderVertexBuilder();
+                        renderListBuilder();
                         updateUI();
                     } catch (err) {
-                        alert('Invalid preset JSON file');
+                        alert('Invalid JSON file format: ' + (err.message || err));
                     }
                 };
                 reader.readAsText(file);
@@ -723,12 +850,25 @@
             state.includeTadpoles = document.getElementById('chk-tadpoles').checked;
         }
 
+        function toggleDisableCoupling(name) {
+            const idx = state.disabledCouplings.indexOf(name);
+            if (idx !== -1) {
+                state.disabledCouplings.splice(idx, 1);
+            } else {
+                state.disabledCouplings.push(name);
+                state.couplingOrders[name] = 0;
+            }
+            renderCouplingOrders();
+        }
+
         function adjustCoupling(name, delta) {
+            if (state.disabledCouplings.includes(name)) return;
             state.couplingOrders[name] = Math.max(0, (state.couplingOrders[name] || 0) + delta);
             renderCouplingOrders();
         }
 
         function onCouplingChange(name, val) {
+            if (state.disabledCouplings.includes(name)) return;
             state.couplingOrders[name] = Math.max(0, parseInt(val, 10) || 0);
         }
 
@@ -742,6 +882,7 @@
             document.getElementById('chk-disconnected').checked = false;
             document.getElementById('chk-tadpoles').checked = false;
             state.disabledParticles.clear();
+            state.disabledCouplings = [];
             state.laws = { charge: true, lepton: true, baryon: true };
             ['charge', 'lepton', 'baryon'].forEach(l => {
                 const btn = document.getElementById(`toggle-law-${l}`);
@@ -857,17 +998,25 @@
             container.innerHTML = state.couplingList.map(name => {
                 const val = state.couplingOrders[name] || 0;
                 const isDefault = DEFAULT_COUPLINGS.includes(name);
+                const isDisabled = state.disabledCouplings.includes(name);
                 return `
-                <div class="bg-slate-950 p-2 sm:p-2.5 rounded-xl border border-slate-800 flex flex-col items-center justify-between text-center shadow-inner">
+                <div class="bg-slate-950 p-2 sm:p-2.5 rounded-xl border ${isDisabled ? 'border-slate-800/50 opacity-60' : 'border-slate-800'} flex flex-col items-center justify-between text-center shadow-inner transition-all">
                     <div class="flex items-center justify-between w-full px-0.5">
-                        <span class="text-xs sm:text-sm font-bold text-slate-200 truncate pr-1">${name}</span>
+                        <span class="text-xs sm:text-sm font-bold ${isDisabled ? 'text-slate-500 line-through' : 'text-slate-200'} truncate pr-1">${name}</span>
                         ${!isDefault ? `<button type="button" onclick="removeCouplingConstant('${name}')" class="text-[10px] text-slate-500 hover:text-rose-400"><i class="fa-solid fa-xmark"></i></button>` : '<span></span>'}
                     </div>
-                    <div class="flex items-center gap-1.5 mt-1.5">
-                        <button type="button" onclick="adjustCoupling('${name}', -1)" class="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs sm:text-sm font-bold flex items-center justify-center active:scale-95">-</button>
-                        <input type="number" min="0" value="${val}" onchange="onCouplingChange('${name}', this.value)"
+                    <div class="flex items-center gap-1.5 mt-1.5 ${isDisabled ? 'opacity-40 pointer-events-none' : ''}">
+                        <button type="button" ${isDisabled ? 'disabled' : ''} onclick="adjustCoupling('${name}', -1)" class="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs sm:text-sm font-bold flex items-center justify-center active:scale-95">-</button>
+                        <input type="number" min="0" value="${val}" ${isDisabled ? 'disabled' : ''} onchange="onCouplingChange('${name}', this.value)"
                             class="w-12 sm:w-16 text-center bg-transparent text-sm sm:text-base font-mono-code font-bold text-amber-300 focus:outline-none">
-                        <button type="button" onclick="adjustCoupling('${name}', 1)" class="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs sm:text-sm font-bold flex items-center justify-center active:scale-95">+</button>
+                        <button type="button" ${isDisabled ? 'disabled' : ''} onclick="adjustCoupling('${name}', 1)" class="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs sm:text-sm font-bold flex items-center justify-center active:scale-95">+</button>
+                    </div>
+                    <div class="w-full mt-2 pt-1 border-t border-slate-900/80">
+                        <button type="button" onclick="toggleDisableCoupling('${name}')"
+                            class="w-full py-0.5 text-[9px] font-semibold rounded flex items-center justify-center gap-1 transition-colors ${isDisabled ? 'text-emerald-400 hover:text-emerald-300 bg-emerald-950/40' : 'text-slate-400 hover:text-rose-400 hover:bg-rose-950/20'}">
+                            <i class="fa-solid ${isDisabled ? 'fa-check' : 'fa-ban'} text-[8px]"></i>
+                            <span>${isDisabled ? 'Enable' : 'Disable'}</span>
+                        </button>
                     </div>
                 </div>`;
             }).join('');
@@ -1083,7 +1232,7 @@
                 alert('A particle with this ID already exists.');
                 return;
             }
-            const pDef = { isPair, symbol: sym, antiSymbol: antiSym, id, category: cat, charge: q, lepton: l, baryon: b };
+            const pDef = { isPair, symbol: sym, antiSymbol: antiSym, id, category: cat, charge: q, lepton: l, baryon: b, sympy_data: {} };
             try { Particles.registerCustom(pDef); } catch (err) { alert('Unable to add custom particle: ' + (err.message || err)); return; }
             state.customParticles.push(pDef);
             closeCustomParticleModal();
@@ -1148,6 +1297,7 @@
             if (DEFAULT_COUPLINGS.includes(name)) return;
             state.couplingList = state.couplingList.filter(c => c !== name);
             delete state.couplingOrders[name];
+            state.disabledCouplings = state.disabledCouplings.filter(c => c !== name);
             state.customVertices.forEach(v => { if (v.couplingOrders) delete v.couplingOrders[name]; });
             Object.keys(vertexDraft.couplingOrders).forEach(k => { if (k === name) delete vertexDraft.couplingOrders[k]; });
             renderCouplingOrders(); renderRemoveCouplings(); renderVertexBuilder();
@@ -1192,6 +1342,7 @@
         }
         function openVertexModal() {
             vertexDraft.incoming = []; vertexDraft.outgoing = []; vertexDraft.target = 'incoming'; vertexDraft.couplingOrders = {};
+            vertexDraft.sympy_data = {};
             state.couplingList.forEach(c => { vertexDraft.couplingOrders[c] = (c === 'QED' ? 1 : 0); });
             document.getElementById('vertex-input-id').value = 'vertex_' + (state.customVertices.length + 1);
             document.getElementById('modal-custom-vertex').classList.remove('hidden');
@@ -1211,7 +1362,15 @@
             const cloneSlot = item => item && item.isList ? {
                 isList: true, id: item.id || item.name, name: item.name || item.id, description: item.description || '', particles: (item.particles || []).map(p => ({ ...p }))
             } : { ...item };
-            state.customVertices.push({ id, incoming: vertexDraft.incoming.map(cloneSlot), outgoing: vertexDraft.outgoing.map(cloneSlot), couplingOrders: { ...vertexDraft.couplingOrders } });
+            state.customVertices.push({
+                id,
+                incoming: vertexDraft.incoming.map(cloneSlot),
+                outgoing: vertexDraft.outgoing.map(cloneSlot),
+                couplingOrders: { ...vertexDraft.couplingOrders },
+                sympy_data: (vertexDraft.sympy_data && typeof vertexDraft.sympy_data === 'object' && !Array.isArray(vertexDraft.sympy_data))
+                    ? { ...vertexDraft.sympy_data }
+                    : {}
+            });
             closeVertexModal();
         }
 

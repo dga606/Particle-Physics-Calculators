@@ -33,36 +33,36 @@
 
   const theoryVertices = {
     qed: [
-      { in: [Particles.chargedLeptons, Particles.antichargedLeptons], out: [Particles.photon], order: { QED: 1 } },
-      { in: [Particles.quarks, Particles.antiquarks], out: [Particles.photon], order: { QED: 1 } }
+      { in: [Particles.chargedLeptons, Particles.antichargedLeptons], out: [Particles.photon], order: { QED: 1 }, sympy_data: {} },
+      { in: [Particles.quarks, Particles.antiquarks], out: [Particles.photon], order: { QED: 1 }, sympy_data: {} }
     ],
     qcd: [
-      { in: [Particles.quarks, Particles.antiquarks], out: [Particles.gluon], order: { QCD: 1 } },
-      { in: [Particles.gluon, Particles.gluon], out: [Particles.gluon], order: { QCD: 1 } },
-      { in: [Particles.gluon, Particles.gluon], out: [Particles.gluon, Particles.gluon], order: { QCD: 2 } }
+      { in: [Particles.quarks, Particles.antiquarks], out: [Particles.gluon], order: { QCD: 1 }, sympy_data: {} },
+      { in: [Particles.gluon, Particles.gluon], out: [Particles.gluon], order: { QCD: 1 }, sympy_data: {} },
+      { in: [Particles.gluon, Particles.gluon], out: [Particles.gluon, Particles.gluon], order: { QCD: 2 }, sympy_data: {} }
     ],
     ew: [
-      { in: [Particles.chargedLeptons, Particles.antichargedLeptons], out: [Particles.z0], order: { EW: 1 } },
-      { in: [Particles.neutrinos, Particles.antineutrinos], out: [Particles.z0], order: { EW: 1 } },
-      { in: [Particles.quarks, Particles.antiquarks], out: [Particles.z0], order: { EW: 1 } },
-      { in: [Particles.chargedLeptons, Particles.antineutrinos], out: [Particles.wMinus], order: { EW: 1 } },
-      { in: [Particles.upTypeQuarks, Particles.antiDownTypeQuarks], out: [Particles.wPlus], order: { EW: 1 } },
-      { in: [Particles.wPlus, Particles.wMinus], out: [Particles.photon], order: { QED: 1 } },
-      { in: [Particles.wPlus, Particles.wMinus], out: [Particles.z0], order: { EW: 1 } },
-      { in: [Particles.wPlus, Particles.wMinus], out: [Particles.wPlus, Particles.wMinus], order: { EW: 2 } },
-      { in: [Particles.wPlus, Particles.wMinus], out: [Particles.photon, Particles.photon], order: { QED: 2 } },
-      { in: [Particles.wPlus, Particles.wMinus], out: [Particles.z0, Particles.z0], order: { EW: 2 } },
-      { in: [Particles.wPlus, Particles.wMinus], out: [Particles.photon, Particles.z0], order: { QED: 1, EW: 1 } }
+      { in: [Particles.chargedLeptons, Particles.antichargedLeptons], out: [Particles.z0], order: { EW: 1 }, sympy_data: {} },
+      { in: [Particles.neutrinos, Particles.antineutrinos], out: [Particles.z0], order: { EW: 1 }, sympy_data: {} },
+      { in: [Particles.quarks, Particles.antiquarks], out: [Particles.z0], order: { EW: 1 }, sympy_data: {} },
+      { in: [Particles.chargedLeptons, Particles.antineutrinos], out: [Particles.wMinus], order: { EW: 1 }, sympy_data: {} },
+      { in: [Particles.upTypeQuarks, Particles.antiDownTypeQuarks], out: [Particles.wPlus], order: { EW: 1 }, sympy_data: {} },
+      { in: [Particles.wPlus, Particles.wMinus], out: [Particles.photon], order: { QED: 1 }, sympy_data: {} },
+      { in: [Particles.wPlus, Particles.wMinus], out: [Particles.z0], order: { EW: 1 }, sympy_data: {} },
+      { in: [Particles.wPlus, Particles.wMinus], out: [Particles.wPlus, Particles.wMinus], order: { EW: 2 }, sympy_data: {} },
+      { in: [Particles.wPlus, Particles.wMinus], out: [Particles.photon, Particles.photon], order: { QED: 2 }, sympy_data: {} },
+      { in: [Particles.wPlus, Particles.wMinus], out: [Particles.z0, Particles.z0], order: { EW: 2 }, sympy_data: {} },
+      { in: [Particles.wPlus, Particles.wMinus], out: [Particles.photon, Particles.z0], order: { QED: 1, EW: 1 }, sympy_data: {} }
     ],
     higgs: [
-      { in: [Particles.chargedLeptons, Particles.antichargedLeptons], out: [Particles.higgs], order: { Higgs: 1 } },
-      { in: [Particles.quarks, Particles.antiquarks], out: [Particles.higgs], order: { Higgs: 1 } },
-      { in: [Particles.wPlus, Particles.wMinus], out: [Particles.higgs], order: { Higgs: 1 } },
-      { in: [Particles.z0, Particles.z0], out: [Particles.higgs], order: { Higgs: 1 } },
-      { in: [Particles.wPlus, Particles.wMinus], out: [Particles.higgs, Particles.higgs], order: { Higgs: 2 } },
-      { in: [Particles.z0, Particles.z0], out: [Particles.higgs, Particles.higgs], order: { Higgs: 2 } },
-      { in: [Particles.higgs, Particles.higgs], out: [Particles.higgs], order: { Higgs: 1 } },
-      { in: [Particles.higgs, Particles.higgs], out: [Particles.higgs, Particles.higgs], order: { Higgs: 2 } }
+      { in: [Particles.chargedLeptons, Particles.antichargedLeptons], out: [Particles.higgs], order: { Higgs: 1 }, sympy_data: {} },
+      { in: [Particles.quarks, Particles.antiquarks], out: [Particles.higgs], order: { Higgs: 1 }, sympy_data: {} },
+      { in: [Particles.wPlus, Particles.wMinus], out: [Particles.higgs], order: { Higgs: 1 }, sympy_data: {} },
+      { in: [Particles.z0, Particles.z0], out: [Particles.higgs], order: { Higgs: 1 }, sympy_data: {} },
+      { in: [Particles.wPlus, Particles.wMinus], out: [Particles.higgs, Particles.higgs], order: { Higgs: 2 }, sympy_data: {} },
+      { in: [Particles.z0, Particles.z0], out: [Particles.higgs, Particles.higgs], order: { Higgs: 2 }, sympy_data: {} },
+      { in: [Particles.higgs, Particles.higgs], out: [Particles.higgs], order: { Higgs: 1 }, sympy_data: {} },
+      { in: [Particles.higgs, Particles.higgs], out: [Particles.higgs, Particles.higgs], order: { Higgs: 2 }, sympy_data: {} }
     ]
   };
 
@@ -76,6 +76,9 @@
     const rawIn = Array.isArray(basicVertex.in) ? basicVertex.in : [basicVertex.in];
     const rawOut = Array.isArray(basicVertex.out) ? basicVertex.out : [basicVertex.out];
     const order = basicVertex.order || { QED: 0, EW: 0, QCD: 0, Higgs: 0 };
+    const sympy_data = (basicVertex.sympy_data && typeof basicVertex.sympy_data === 'object' && !Array.isArray(basicVertex.sympy_data))
+      ? { ...basicVertex.sympy_data }
+      : {};
 
     function resolveSlot(slot) {
       if (slot && slot.isList) {
@@ -101,7 +104,7 @@
     for (let i = 0; i < maxLength; i++) {
       const concreteIn = inSlots.map(slot => slot.length === maxLength ? slot[i] : slot[0]).filter(Boolean);
       const concreteOut = outSlots.map(slot => slot.length === maxLength ? slot[i] : slot[0]).filter(Boolean);
-      concreteVertices.push({ in: concreteIn, out: concreteOut, order: { ...order } });
+      concreteVertices.push({ in: concreteIn, out: concreteOut, order: { ...order }, sympy_data: { ...sympy_data } });
     }
     return concreteVertices;
   }
@@ -130,10 +133,7 @@
           else currentOut.push(p.anti || p);
         }
 
-        // Every physical interaction vertex must have at least one incoming
-        // and one outgoing leg. Reject the empty-side crossing cases (0->N/N->0).
         if (currentIn.length === 0 || currentOut.length === 0) continue;
-
         if ([...currentIn, ...currentOut].some(p => isParticleBlacklisted(p, blacklist))) continue;
 
         const sig = getVertexSignature(currentIn, currentOut);
@@ -142,7 +142,8 @@
           results.push({
             in: sortParticles(currentIn),
             out: sortParticles(currentOut),
-            order: { ...concrete.order }
+            order: { ...concrete.order },
+            sympy_data: { ...(concrete.sympy_data || {}) }
           });
         }
       }

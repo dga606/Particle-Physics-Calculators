@@ -602,10 +602,17 @@
     `;
   }
 
+
+
+
+
+  ///////////////////////////////////
+  //          JSON DATA           //
+  //////////////////////////////////
+
+
   /**
-   * Stores the minimum non-circular particle identity needed to recreate a line.
-   * The full Particle object is intentionally NOT stored because it points to its
-   * antiparticle and would create circular data.
+   * Stores the particle identity needed to recreate a line.
    */
   function extractParticleInfo(p) {
     if (!p) return null;
@@ -616,6 +623,7 @@
       matterType: p.matterType || 'particle' // 'particle', 'antiparticle', or 'both'
     };
   }
+
 
   /**
    * Captures all diagram geometry, positions, vertices, and lines without circular refs
@@ -639,7 +647,8 @@
       index: idx,
       type: 'vertex',
       pos: v.pos ? { x: v.pos.x, y: v.pos.y } : null,
-      order: v.type && v.type.order ? { ...v.type.order } : {}
+      order: v.type && v.type.order ? { ...v.type.order } : {},
+      sympy_data: v.sympy_data ? { ...v.sympy_data } : {}
     }));
 
     const lines = (diag.lines || []).map((l, idx) => {
@@ -688,6 +697,11 @@
       lines
     };
   }
+
+
+
+
+  
 
   function renderDiagramToContainer(gridElement, exactOrder, diagramIndex, diag) {
     computeDiagramPositions(diag);

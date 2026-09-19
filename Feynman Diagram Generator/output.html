@@ -189,6 +189,12 @@
       }
     }
 
+
+
+
+
+
+
     function downloadAllDiagramsJSON() {
       const button = document.getElementById('btn-download-json');
       const diagrams = Array.isArray(window.__OUTPUT_DIAGRAMS) ? window.__OUTPUT_DIAGRAMS : [];
@@ -197,12 +203,95 @@
         return;
       }
 
+      const sc = window.__OUTPUT_SCATTERING_CONFIG || {};
+      const disabledSet = new Set(sc.disabledParticles || []);
+
+      // 1. Gather all non-disabled Standard Model particles
+      const enabledParticles = [];
+      (Particles.all || []).forEach(p => {
+        if (!disabledSet.has(p.id) && !disabledSet.has(p.symbol) && !disabledSet.has(p.name)) {
+          enabledParticles.push({
+            id: p.id,
+            name: p.name || p.id,
+            symbol: p.symbol || p.id,
+            matterType: p.matterType || 'particle',
+            mass: p.mass || 0,
+            charge: p.charge || 0,
+            spin: p.spin !== undefined ? p.spin : 0.5,
+            lepton: p.lepton || 0,
+            baryon: p.baryon || 0,
+            categories: [...(p.categories || [])],
+            generation: p.generation || null,
+            sympy_data: p.sympy_data ? { ...p.sympy_data } : {}
+          });
+        }
+      });
+
+      // 2. Append non-disabled custom particles
+      (sc.customParticles || []).forEach(cp => {
+        if (!disabledSet.has(cp.id)) {
+          enabledParticles.push({
+            id: cp.id,
+            name: cp.symbol || cp.id,
+            symbol: cp.symbol || cp.id,
+            matterType: 'particle',
+            mass: 0,
+            charge: Number(cp.charge) || 0,
+            spin: 0.5,
+            lepton: Number(cp.lepton) || 0,
+            baryon: Number(cp.baryon) || 0,
+            categories: [cp.category || 'other', 'custom'],
+            sympy_data: cp.sympy_data ? { ...cp.sympy_data } : {}
+          });
+        }
+        if (cp.isPair && !disabledSet.has(cp.id + '_bar')) {
+          enabledParticles.push({
+            id: cp.id + '_bar',
+            name: cp.antiSymbol || (cp.symbol + '̄'),
+            symbol: cp.antiSymbol || (cp.symbol + '̄'),
+            matterType: 'antiparticle',
+            mass: 0,
+            charge: -(Number(cp.charge) || 0),
+            spin: 0.5,
+            lepton: -(Number(cp.lepton) || 0),
+            baryon: -(Number(cp.baryon) || 0),
+            categories: [cp.category || 'other', 'custom', 'antimatter'],
+            sympy_data: cp.sympy_data ? { ...cp.sympy_data } : {}
+          });
+        }
+      });
+
+      // 3. Format custom vertices with sympy_data
+      const customVertices = (sc.customVertices || []).map(v => ({
+        id: v.id || '',
+        incoming: v.incoming || [],
+        outgoing: v.outgoing || [],
+        couplingOrders: { ...(v.couplingOrders || {}) },
+        sympy_data: v.sympy_data ? { ...v.sympy_data } : {}
+      }));
+
+      // 4. Assemble final JSON payload
       const payload = {
         exportData: { author: 'dga606' },
-        version: 1,
+        version: 2,
         createdAt: Date.now(),
-        scatteringConfig: window.__OUTPUT_SCATTERING_CONFIG || {},
-        sharedData: window.__DIAGRAM_SHARED_DATA || {},
+        common: {
+          scattering: {
+            incoming: sc.incoming || [],
+            outgoing: sc.outgoing || [],
+            couplingOrders: { ...(sc.couplingOrders || {}) },
+            couplingList: [...(sc.couplingList || [])],
+            disabledCouplings: [...(sc.disabledCouplings || [])],
+            maxLoops: sc.maxLoops || 0,
+            minTotalOrder: sc.minTotalOrder || 0,
+            includeDisconnected: !!sc.includeDisconnected,
+            includeTadpoles: !!sc.includeTadpoles,
+            laws: sc.laws || { charge: true, lepton: true, baryon: true }
+          },
+          particles: enabledParticles,
+          customVertices: customVertices,
+          customLists: sc.customLists || []
+        },
         diagrams: diagrams.map((diagramData, index) => ({
           index: index + 1,
           diagramData
@@ -234,6 +323,12 @@
         button.innerHTML = originalHtml;
       }
     }
+
+
+
+
+
+
 
     window.OutputUI = {
       setFormula(formulaText) {

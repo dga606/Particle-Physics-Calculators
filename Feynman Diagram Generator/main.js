@@ -53,6 +53,7 @@
       // Shared, output-page-level data used by every diagram editor tab.
       // IMPORTANT: never carry Particle objects into this data. Keep only plain
       // serializable particle identity and the custom-definition information.
+      // Shared, output-page-level data used by every diagram editor tab.
       const serializeParticleRef = (p) => {
         if (!p) return null;
         return {
@@ -62,6 +63,7 @@
           matterType: p.matterType || (p.isAnti ? 'antiparticle' : 'particle')
         };
       };
+
       const serializeSlot = (slot) => {
         if (!slot) return null;
         if (slot.isList) {
@@ -74,18 +76,24 @@
         }
         return serializeParticleRef(slot);
       };
+
       const sharedCustomVertices = (Array.isArray(config.customVertices) ? config.customVertices : []).map(v => ({
         id: v.id || '',
         incoming: Array.isArray(v.incoming) ? v.incoming.map(serializeSlot).filter(Boolean) : [],
         outgoing: Array.isArray(v.outgoing) ? v.outgoing.map(serializeSlot).filter(Boolean) : [],
-        couplingOrders: { ...(v.couplingOrders || {}) }
+        couplingOrders: { ...(v.couplingOrders || {}) },
+        sympy_data: (v.sympy_data && typeof v.sympy_data === 'object' && !Array.isArray(v.sympy_data))
+          ? { ...v.sympy_data }
+          : {}
       }));
+
       const sharedCustomLists = (Array.isArray(config.customLists) ? config.customLists : []).map(l => ({
         id: l.id || l.name || '',
         name: l.name || l.id || '',
         description: l.description || '',
         particles: Array.isArray(l.particles) ? l.particles.map(serializeParticleRef).filter(Boolean) : []
       }));
+
       window.__DIAGRAM_SHARED_DATA = {
         customParticles: (Array.isArray(config.customParticles) ? config.customParticles : []).map(p => ({
           isPair: !!p.isPair,
@@ -95,7 +103,10 @@
           category: p.category || 'other',
           charge: Number(p.charge) || 0,
           lepton: Number(p.lepton) || 0,
-          baryon: Number(p.baryon) || 0
+          baryon: Number(p.baryon) || 0,
+          sympy_data: (p.sympy_data && typeof p.sympy_data === 'object' && !Array.isArray(p.sympy_data))
+            ? { ...p.sympy_data }
+            : {}
         })),
         customLists: sharedCustomLists,
         customVertices: sharedCustomVertices,

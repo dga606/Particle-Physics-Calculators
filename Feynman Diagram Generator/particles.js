@@ -6,7 +6,7 @@
     constructor({
       id, name, symbol = null, mass = 0, charge = 0, spin = 0.5,
       matterType = 'particle', categories = [], generation = null,
-      lepton = 0, baryon = 0, aliases = []
+      lepton = 0, baryon = 0, aliases = [], sympy_data = {}
     }) {
       this.id = id;
       this.name = name || id;
@@ -21,6 +21,9 @@
       this.baryon = baryon;
       this.aliases = [id, this.symbol, ...aliases];
       this.anti = null;
+      this.sympy_data = (sympy_data && typeof sympy_data === 'object' && !Array.isArray(sympy_data))
+        ? { ...sympy_data }
+        : {};
     }
     hasCategory(cat) { return this.categories.includes(cat); }
     get isSelfConjugate() { return this.matterType === 'both' || this.anti === this; }
@@ -162,16 +165,21 @@
     Particle, registerPair,
     registerCustom(customDef) {
       const isPair = !!customDef.isPair;
+      const sData = (customDef.sympy_data && typeof customDef.sympy_data === 'object' && !Array.isArray(customDef.sympy_data))
+        ? { ...customDef.sympy_data }
+        : {};
       const p1 = {
         id: customDef.id, name: customDef.symbol || customDef.id, symbol: customDef.symbol || customDef.id,
         charge: parseFloat(customDef.charge) || 0, lepton: parseFloat(customDef.lepton) || 0, baryon: parseFloat(customDef.baryon) || 0,
-        categories: [customDef.category || 'other', 'custom']
+        categories: [customDef.category || 'other', 'custom'],
+        sympy_data: { ...sData }
       };
       if (isPair) {
         const p2 = {
           id: customDef.id + '_bar', name: customDef.antiSymbol || (customDef.symbol + '̄'), symbol: customDef.antiSymbol || (customDef.symbol + '̄'),
           charge: -(parseFloat(customDef.charge) || 0), lepton: -(parseFloat(customDef.lepton) || 0), baryon: -(parseFloat(customDef.baryon) || 0),
-          categories: [customDef.category || 'other', 'custom', 'antimatter']
+          categories: [customDef.category || 'other', 'custom', 'antimatter'],
+          sympy_data: { ...sData }
         };
         return registerPair({ particle: p1, antiparticle: p2 });
       } else {
