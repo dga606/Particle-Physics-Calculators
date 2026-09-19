@@ -254,9 +254,11 @@
       }));
 
       const payload = {
-        exportData: { author: 'dga606' },
-        version: 2,
-        createdAt: Date.now(),
+        exportData: { 
+          tool_used: 'https://dga606.github.io/Particle-Physics-Calculators/',
+          version: 4,
+          createdAt: Date.now()
+        },
         common: {
           scattering: {
             incoming: sc.incoming || [],

@@ -17,7 +17,7 @@
         return;
       }
 
-      // Store in URL hash - zero cross-origin security restrictions on file:///
+      // Store in URL hash
       const payload = encodeURIComponent(JSON.stringify(config));
       window.open('output.html#' + payload, '_blank');
     },
