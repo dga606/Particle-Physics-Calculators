@@ -503,7 +503,12 @@
       const sagitta = line.sagitta || 0;
       const ctrl = getLineControlPoint(line);
 
-      const pId = line.particle.id.toLowerCase();
+      // Defensive fallback against corrupted/null particles
+      if (!line.particle || !line.particle.id) {
+        line.particle = { id: 'gamma', symbol: 'γ', matterType: 'particle', hasCategory: () => false, isSelfConjugate: true };
+      }
+
+      const pId = String(line.particle.id).toLowerCase();
       const isPhoton = pId === 'gamma' || pId === 'photon' || pId === 'a' || pId === 'y';
       const isGluon = pId === 'gluon' || pId === 'g' || line.particle.hasCategory('qcd_boson') || line.particle.hasCategory('gluons');
       const isWeak = pId === 'w+' || pId === 'w-' || pId === 'z0' || pId === 'z' || line.particle.hasCategory('charged_boson') || line.particle.hasCategory('neutral_boson');

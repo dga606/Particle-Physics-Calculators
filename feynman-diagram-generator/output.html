@@ -383,8 +383,9 @@
     // ------------------------------------------------------------------------
     window.openDiagramEditor = function(diagramData) {
       const shared = window.__DIAGRAM_SHARED_DATA || {};
+      const catalog = window.__OUTPUT_CATALOG || {};
 
-      // 1. Build a lean, non-circular diagram payload
+      // 1. Build lean payload with common particles catalog
       const payload = {
         version: 2,
         createdAt: Date.now(),
@@ -392,6 +393,9 @@
         sharedData: {
           formulaText: shared.formulaText || '',
           customParticles: shared.customParticles || []
+        },
+        common: {
+          particles: catalog.particles || []
         }
       };
 
@@ -400,7 +404,7 @@
 
       const token = 'feynman_inspect_' + Date.now() + '_' + Math.random().toString(36).slice(2);
 
-      // 2. Safe stringify (strips accidental circular references automatically)
+      // 2. Safe stringify (strips circular references automatically)
       const seen = new WeakSet();
       let serialized = null;
       try {

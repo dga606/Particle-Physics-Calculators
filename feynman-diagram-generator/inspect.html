@@ -107,38 +107,75 @@
 
   
 
-  function makeParticle(infoOrIndex) {
-    if (infoOrIndex === null || infoOrIndex === undefined) return null;
-    let info = infoOrIndex;
+  function makeParticle(infoOrIndex, fallbackObj) {
+    let info = null;
+
+    // 1. If index number, resolve from common catalog
     if (typeof infoOrIndex === 'number' && payload.common && Array.isArray(payload.common.particles)) {
       info = payload.common.particles[infoOrIndex];
     }
-    if (!info) return null;
-    const registered = Particles.get(info.id || '');
-    if (registered) return registered;
+
+    // 2. If infoOrIndex is an object, use it directly
+    if (!info && typeof infoOrIndex === 'object' && infoOrIndex !== null) {
+      info = infoOrIndex;
+    }
+
+    // 3. Fallback to secondary object reference
+    if (!info && typeof fallbackObj === 'object' && fallbackObj !== null) {
+      info = fallbackObj;
+    }
+
+    // 4. If string ID
+    if (!info && typeof infoOrIndex === 'string' && infoOrIndex.trim()) {
+      info = { id: infoOrIndex.trim() };
+    }
+
+    // 5. Hard fallback to guarantee a valid Particle structure (never returns null)
+    if (!info || !info.id) {
+      const dummy = {
+        id: (info && info.id) || 'gamma',
+        name: (info && info.name) || 'Photon',
+        symbol: (info && (info.symbol || info.name)) || 'γ',
+        matterType: (info && info.matterType) || 'particle',
+        categories: [],
+        aliases: []
+      };
+      dummy.hasCategory = function() { return false; };
+      Object.defineProperty(dummy, 'isSelfConjugate', { value: true, enumerable: false });
+      return dummy;
+    }
+
+    const cleanId = String(info.id || '').trim();
+    const registered = Particles.get(cleanId);
+    if (registered && typeof registered.hasCategory === 'function') return registered;
 
     const custom = (sharedData.customParticles || []).find(function(def) {
-      return def.id === info.id || (def.isPair && info.id === def.id + '_bar');
+      return def.id === cleanId || (def.isPair && cleanId === def.id + '_bar');
     });
+
     const fallback = {
-      id: info.id || '',
-      name: info.name || info.id || '',
-      symbol: info.symbol || info.name || info.id || '',
-      matterType: info.matterType || 'particle',
+      id: cleanId,
+      name: info.name || cleanId,
+      symbol: info.symbol || info.name || cleanId,
+      matterType: info.matterType || (info.isAnti ? 'antiparticle' : 'particle'),
       categories: custom ? [custom.category || 'other', 'custom'] : (info.categories || []),
-      aliases: [info.id || '', info.symbol || '', info.name || '']
+      aliases: [cleanId]
     };
-    fallback.hasCategory = function(cat) { return this.categories.includes(cat); };
+    fallback.hasCategory = function(cat) { return Array.isArray(this.categories) && this.categories.includes(cat); };
     Object.defineProperty(fallback, 'isSelfConjugate', { value: fallback.matterType === 'both', enumerable: false });
     return fallback;
   }
 
   const inStates = (diagramData.inStates || []).map(function(n) {
-    return { index: n.index, type: 'inState', particle: makeParticle(n.particleIndex !== undefined ? n.particleIndex : n.particle), pos: clonePos(n.pos) };
+    const pRef = (n.particleIndex != null) ? n.particleIndex : n.particle;
+    return { index: n.index, type: 'inState', particle: makeParticle(pRef, n.particle), pos: clonePos(n.pos) };
   });
+
   const outStates = (diagramData.outStates || []).map(function(n) {
-    return { index: n.index, type: 'outState', particle: makeParticle(n.particleIndex !== undefined ? n.particleIndex : n.particle), pos: clonePos(n.pos) };
+    const pRef = (n.particleIndex != null) ? n.particleIndex : n.particle;
+    return { index: n.index, type: 'outState', particle: makeParticle(pRef, n.particle), pos: clonePos(n.pos) };
   });
+
   const vertices = (diagramData.vertices || []).map(function(n) {
     let vOrder = n.order;
     if ((!vOrder || Object.keys(vOrder).length === 0) && n.configIndex !== undefined && payload.common && Array.isArray(payload.common.vertexConfigurations)) {
@@ -157,10 +194,12 @@
   }
 
   const lines = (diagramData.lines || []).map(function(l) {
+    const pRef = (l.particleIndex != null) ? l.particleIndex : l.particle;
+    const p = makeParticle(pRef, l.particle);
     return {
       index: l.index,
-      particle: makeParticle(l.particleIndex !== undefined ? l.particleIndex : l.particle),
-      particleType: l.particleType || (l.particle && l.particle.matterType) || 'particle',
+      particle: p,
+      particleType: l.particleType || (p && p.matterType) || 'particle',
       shape: l.shape || 'straight',
       sagitta: Number(l.sagitta || 0),
       inPos: clonePos(l.inPos),
