@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- Portal Homepage -->
+  <url>
+    <loc>https://dga606.github.io/Particle-Physics-Calculators/</loc>
+  </url>
+
+  <!-- Scientific Calculator -->
+  <url>
+    <loc>https://dga606.github.io/Particle-Physics-Calculators/scientific-calculator/calculator.html</loc>
+  </url>
+
+  <!-- Feynman Diagram Generator-->
+  <url>
+    <loc>https://dga606.github.io/Particle-Physics-Calculators/feynman-diagram-generator/input.html</loc><priority>1.0</priority>
+  </url>
+</urlset>
