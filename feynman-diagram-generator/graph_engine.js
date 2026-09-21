@@ -10,6 +10,7 @@
     constructor(particle) {
       this.particle = particle;
       this.pos = null;
+      this._nid = -1;
     }
   }
 
@@ -17,6 +18,7 @@
     constructor(particle) {
       this.particle = particle;
       this.pos = null;
+      this._nid = -1;
     }
   }
 
@@ -39,6 +41,7 @@
       this.inLines = [...inLines];
       this.outLines = [];
       this.pos = null;
+      this._nid = -1;
       this.sympy_data = (sympy_data && typeof sympy_data === 'object' && !Array.isArray(sympy_data))
         ? { ...sympy_data }
         : ((type && type.sympy_data && typeof type.sympy_data === 'object') ? { ...type.sympy_data } : {});
@@ -56,18 +59,20 @@
       this.vertices = [];
       this.lines = [];
       this.order = {};
+      this.totalOrderVal = 0;
       this.noOfLoops = 0;
       this.openLines = [];
       this.unmatchedOutStates = [];
     }
 
     get totalOrder() {
-      return Object.values(this.order).reduce((acc, val) => acc + (val || 0), 0);
+      return this.totalOrderVal;
     }
 
     clone() {
       const copy = new Diagram();
       copy.order = { ...this.order };
+      copy.totalOrderVal = this.totalOrderVal;
       copy.noOfLoops = this.noOfLoops;
       const inStateMap = new Map();
       const outStateMap = new Map();
@@ -77,6 +82,7 @@
       copy.inStates = this.inStates.map(is => {
         const c = new InState(is.particle);
         c.pos = is.pos ? { ...is.pos } : null;
+        c._nid = is._nid;
         inStateMap.set(is, c);
         return c;
       });
@@ -84,6 +90,7 @@
       copy.outStates = this.outStates.map(os => {
         const c = new OutState(os.particle);
         c.pos = os.pos ? { ...os.pos } : null;
+        c._nid = os._nid;
         outStateMap.set(os, c);
         return c;
       });
@@ -91,6 +98,7 @@
       copy.vertices = this.vertices.map(v => {
         const c = new Vertex(v.type, [], { ...(v.sympy_data || {}) });
         c.pos = v.pos ? { ...v.pos } : null;
+        c._nid = v._nid;
         vertexMap.set(v, c);
         return c;
       });
@@ -123,23 +131,16 @@
   }
 
   function hasTadpole(diagram) {
-    for (const l of diagram.lines) {
-      if (l.inPort instanceof Vertex && l.outPort instanceof Vertex && l.inPort === l.outPort) return true;
-    }
-    for (const v of diagram.vertices) {
-      const hasExternal = v.inLines.some(l => l.inPort instanceof InState) || v.outLines.some(l => l.outPort instanceof OutState);
-      if (!hasExternal && v.inLines.length === 1 && v.outLines.length === 1 && v.inLines[0].inPort === v && v.outLines[0].outPort === v) return true;
+    for (let i = 0; i < diagram.lines.length; i++) {
+      const l = diagram.lines[i];
+      if (l.inPort && l.outPort && l.inPort === l.outPort && l.inPort instanceof Vertex) return true;
     }
     return false;
   }
 
   function isConnected(diagram) {
-    // Test connectivity as a SINGLE undirected component.
-    // The old implementation seeded the traversal with every incoming state,
-    // which incorrectly made separate incoming->...->outgoing components look
-    // connected. It also accepted multi-line order-0 diagrams as connected.
     const allNodes = [...diagram.inStates, ...diagram.vertices, ...diagram.outStates];
-    if (allNodes.length === 0) return true;
+    if (allNodes.length <= 1) return true;
 
     const visitedNodes = new Set([allNodes[0]]);
     const visitedLines = new Set();
@@ -148,12 +149,11 @@
     while (queue.length > 0) {
       const curr = queue.shift();
 
-      for (const line of diagram.lines) {
+      for (let i = 0; i < diagram.lines.length; i++) {
+        const line = diagram.lines[i];
         if (line.inPort !== curr && line.outPort !== curr) continue;
 
         visitedLines.add(line);
-
-        // Treat every propagator as an undirected edge for topology testing.
         const other = line.inPort === curr ? line.outPort : line.inPort;
         if (other && !visitedNodes.has(other)) {
           visitedNodes.add(other);
@@ -190,93 +190,71 @@
   }
 
   function particleSignature(list) {
-    return (list || [])
-      .map(p => (p && p.id ? p.id : String(p)))
-      .sort()
-      .join(',');
-  }
-
-  function sameParticles(listA, listB) {
-    return particleSignature(listA) === particleSignature(listB);
-  }
-
-  function getPartialGraphLoopRank(diag) {
-    // Cyclomatic number E - N + C over the graph that has already been
-    // connected. Open/dangling line ends are deliberately ignored here.
-    // The rank cannot decrease as more endpoints are attached, so it is a
-    // safe pruning bound while searching for diagrams with maxLoops.
-    const nodes = new Set([...diag.inStates, ...diag.vertices, ...diag.outStates]);
-    const parent = new Map();
-    const rank = new Map();
-
-    function makeSet(n) {
-      if (!parent.has(n)) {
-        parent.set(n, n);
-        rank.set(n, 0);
-      }
+    if (!list || list.length === 0) return '';
+    if (list.length === 1) {
+      const p = list[0];
+      return p && p.id ? p.id : String(p);
     }
-    function find(x) {
-      let r = x;
-      while (parent.get(r) !== r) r = parent.get(r);
-      while (parent.get(x) !== x) {
-        const next = parent.get(x);
-        parent.set(x, r);
-        x = next;
+    return list.map(p => (p && p.id ? p.id : String(p))).sort().join(',');
+  }
+
+  // Fast integer-indexed disjoint set union for exact cyclomatic number E - N + C
+  function getPartialGraphLoopRank(diag) {
+    const totalNodes = diag.inStates.length + diag.outStates.length + diag.vertices.length;
+    if (totalNodes === 0) return 0;
+
+    const parent = new Int32Array(totalNodes);
+    for (let i = 0; i < totalNodes; i++) parent[i] = i;
+
+    function find(i) {
+      let r = i;
+      while (parent[r] !== r) r = parent[r];
+      let curr = i;
+      while (curr !== r) {
+        let nxt = parent[curr];
+        parent[curr] = r;
+        curr = nxt;
       }
       return r;
     }
-    function union(a, b) {
-      makeSet(a); makeSet(b);
-      let ra = find(a), rb = find(b);
-      if (ra === rb) return false;
-      if (rank.get(ra) < rank.get(rb)) [ra, rb] = [rb, ra];
-      parent.set(rb, ra);
-      if (rank.get(ra) === rank.get(rb)) rank.set(ra, rank.get(ra) + 1);
-      return true;
-    }
 
-    nodes.forEach(makeSet);
-    let edgeCount = 0;
-    for (const line of diag.lines) {
-      if (!line.inPort || !line.outPort) continue;
-      makeSet(line.inPort);
-      makeSet(line.outPort);
-      edgeCount++;
-      union(line.inPort, line.outPort);
+    let cycles = 0;
+    for (let i = 0; i < diag.lines.length; i++) {
+      const l = diag.lines[i];
+      if (!l.inPort || !l.outPort) continue;
+      const u = l.inPort._nid;
+      const v = l.outPort._nid;
+      if (u < 0 || v < 0) continue;
+      const ru = find(u);
+      const rv = find(v);
+      if (ru === rv) {
+        cycles++;
+      } else {
+        parent[ru] = rv;
+      }
     }
-
-    const components = new Set();
-    nodes.forEach(n => components.add(find(n)));
-    return Math.max(0, edgeCount - nodes.size + components.size);
+    return cycles;
   }
 
+  // High-performance compact signature avoiding Map/Set/Object allocations
   function getDiagramTopologySignature(diag) {
-    // Stronger topology signature for partial-state memoization. Vertex IDs
-    // are assigned from deterministic local descriptors; line endpoints use
-    // those IDs and explicitly preserve dangling endpoints.
-    const nodeDescriptors = [];
-    diag.inStates.forEach((n, i) => nodeDescriptors.push({
-      node: n,
-      desc: `I:${i}:${n.particle && n.particle.id}`
-    }));
-    diag.outStates.forEach((n, i) => nodeDescriptors.push({
-      node: n,
-      desc: `O:${i}:${n.particle && n.particle.id}`
-    }));
-    diag.vertices.forEach((v, i) => nodeDescriptors.push({
-      node: v,
-      desc: `V:${i}:${particleSignature(v.inLines.map(l => l.particle))}>${particleSignature(v.outLines.map(l => l.particle))}:${particleSignature(Object.entries(v.type.order || {}).map(([k, val]) => `${normalizeTheoryName(k)}=${val}`))}`
-    }));
+    const edgeStrs = new Array(diag.lines.length);
+    for (let i = 0; i < diag.lines.length; i++) {
+      const l = diag.lines[i];
+      const inId = l.inPort ? l.inPort._nid : -1;
+      const outId = l.outPort ? l.outPort._nid : -1;
+      const pid = l.particle ? l.particle.id : '?';
+      edgeStrs[i] = `${inId}>${outId}:${pid}`;
+    }
+    edgeStrs.sort();
 
-    const nodeId = new Map(nodeDescriptors.map((x, i) => [x.node, `N${i}_${x.desc}`]));
-    const edges = diag.lines.map(l => {
-      const a = l.inPort ? nodeId.get(l.inPort) || 'UNKNOWN' : 'NONE';
-      const b = l.outPort ? nodeId.get(l.outPort) || 'UNKNOWN' : 'DANGLING';
-      return `${a}->${b}:${l.particle && l.particle.id}`;
-    }).sort();
+    const unmatched = new Array(diag.unmatchedOutStates.length);
+    for (let i = 0; i < diag.unmatchedOutStates.length; i++) {
+      unmatched[i] = diag.unmatchedOutStates[i]._nid;
+    }
+    unmatched.sort();
 
-    const unmatchedOut = diag.unmatchedOutStates.map(s => s.particle && s.particle.id).sort();
-    return `${edges.join('|')}||OUT:${unmatchedOut.join(',')}`;
+    return `${edgeStrs.join(';')}|U:${unmatched.join(',')}`;
   }
 
   async function searchDiagramsForExactTotalOrder({
@@ -289,15 +267,18 @@
     rootDiagram.outStates = [...outStates];
     rootDiagram.unmatchedOutStates = [...outStates];
 
+    // Assign continuous integer node IDs for fast array-indexed DSU and topology
+    let nidCounter = 0;
     for (const is of inStates) {
+      is._nid = nidCounter++;
       const line = new Lines(is.particle, is, null, 'straight');
       rootDiagram.lines.push(line);
       rootDiagram.openLines.push(line);
     }
+    for (const os of outStates) {
+      os._nid = nidCounter++;
+    }
 
-    // Interaction vertices with zero total coupling order would make the
-    // search non-terminating (arbitrarily many such insertions could be made).
-    // They are therefore not valid searchable interaction definitions.
     const vertexConfigs = allowedVertexConfigs.filter(v =>
       Array.isArray(v && v.in) && Array.isArray(v && v.out) &&
       v.in.length > 0 && v.out.length > 0 &&
@@ -307,6 +288,10 @@
     const configsByInSignature = new Map();
     const arities = new Set();
     for (const v of vertexConfigs) {
+      // Pre-calculate orders and normalized coupling entries to eliminate Object.entries inside backtrack
+      v._totalOrder = Object.values(v.order || {}).reduce((a, b) => a + (Number(b) || 0), 0);
+      v._orderEntries = Object.entries(v.order || {}).map(([th, val]) => [normalizeTheoryName(th), Number(val) || 0]);
+
       const sig = particleSignature(v.in);
       if (!configsByInSignature.has(sig)) configsByInSignature.set(sig, []);
       configsByInSignature.get(sig).push(v);
@@ -314,26 +299,28 @@
     }
     const sortedArities = [...arities].sort((a, b) => a - b);
 
-    // Memoize partial states reached by a different construction order.
     const seenPartialStates = new Set();
     let searchSteps = 0;
+    let lastYieldTime = performance.now();
 
     async function backtrack(diag) {
       if (abortToken && abortToken.aborted) return;
       searchSteps++;
-      if (searchSteps % 350 === 0) {
-        await new Promise(resolve => setTimeout(resolve, 0));
+
+      // Adaptive time-budget yield (prevents UI freeze while running at maximum CPU throughput)
+      if ((searchSteps & 1023) === 0) {
+        const now = performance.now();
+        if (now - lastYieldTime > 20) {
+          await new Promise(resolve => setTimeout(resolve, 0));
+          lastYieldTime = performance.now();
+        }
       }
 
-      const currentTotalOrder = diag.totalOrder;
+      const currentTotalOrder = diag.totalOrderVal;
       if (currentTotalOrder > targetTotalOrder) return;
-
-      // No arbitrary vertex-count cutoff: a positive coupling order guarantees
-      // finiteness for a fixed target order, while allowing any vertex arity.
       if (getPartialGraphLoopRank(diag) > maxLoops) return;
 
-      const partialSig = getDiagramTopologySignature(diag) +
-        `||ORDER:${Object.entries(diag.order).sort().map(([k,v]) => `${k}=${v}`).join(';')}`;
+      const partialSig = getDiagramTopologySignature(diag);
       if (seenPartialStates.has(partialSig)) return;
       seenPartialStates.add(partialSig);
 
@@ -355,8 +342,7 @@
         return;
       }
 
-      // Branch 1: resolve ANY open line directly to ANY compatible OutState.
-      // Restricting this to openLines[0] is incomplete for loop topologies.
+      // Branch 1: resolve open line to compatible OutState
       for (const line of [...diag.openLines]) {
         const matchingStates = diag.unmatchedOutStates.filter(os =>
           os.particle && line.particle && os.particle.id === line.particle.id
@@ -377,26 +363,24 @@
 
       if (currentTotalOrder >= targetTotalOrder) return;
 
-      // Branch 2: instantiate ANY valid vertex whose complete incoming leg set
-      // can be selected from ANY subset of the currently open lines.
+      // Branch 2: instantiate valid vertex matching combinations of open lines
       for (const arity of sortedArities) {
         if (arity > diag.openLines.length) continue;
         const chosen = [];
         const recurseCombinations = async (start, remaining) => {
           if (abortToken && abortToken.aborted) return;
           if (remaining === 0) {
-            const inParticles = chosen.map(l => l.particle);
-            const matchingVertices = configsByInSignature.get(particleSignature(inParticles)) || [];
+            const inSig = particleSignature(chosen.map(l => l.particle));
+            const matchingVertices = configsByInSignature.get(inSig) || [];
             for (const vType of matchingVertices) {
               if (currentTotalOrder >= targetTotalOrder) break;
-              const vOrderSum = Object.values(vType.order || {}).reduce((a, b) => a + (Number(b) || 0), 0);
+              const vOrderSum = vType._totalOrder;
               if (vOrderSum <= 0 || currentTotalOrder + vOrderSum > targetTotalOrder) continue;
 
               let budgetExceeded = false;
               const nextOrder = { ...diag.order };
-              for (const [th, valRaw] of Object.entries(vType.order || {})) {
-                const val = Number(valRaw) || 0;
-                const normKey = normalizeTheoryName(th);
+              for (let i = 0; i < vType._orderEntries.length; i++) {
+                const [normKey, val] = vType._orderEntries[i];
                 nextOrder[normKey] = (nextOrder[normKey] || 0) + val;
                 if (nextOrder[normKey] > (budget[normKey] !== undefined ? budget[normKey] : Infinity)) {
                   budgetExceeded = true;
@@ -406,12 +390,14 @@
               if (budgetExceeded) continue;
 
               const vertex = new Vertex(vType, chosen.slice(), vType.sympy_data || {});
+              vertex._nid = inStates.length + outStates.length + diag.vertices.length;
               const newOutLines = vertex.generateOutLines();
               if (!Array.isArray(newOutLines) || newOutLines.length === 0) continue;
 
               for (const l of chosen) l.outPort = vertex;
               const oldOrder = diag.order;
               diag.order = nextOrder;
+              diag.totalOrderVal += vOrderSum;
               diag.vertices.push(vertex);
               diag.lines.push(...newOutLines);
 
@@ -425,6 +411,7 @@
               diag.openLines = previousOpen;
               diag.lines.splice(diag.lines.length - newOutLines.length, newOutLines.length);
               diag.vertices.pop();
+              diag.totalOrderVal -= vOrderSum;
               diag.order = oldOrder;
               for (const l of chosen) l.outPort = null;
             }
@@ -467,16 +454,21 @@
       customLists: options.customLists || []
     });
 
-    const allowedVertexConfigs = (catalog.vertexConfigurations || [])
-      .filter(cfg => isTheoryAllowed(cfg.order))
-      .map(cfg => ({
-        index: cfg.index,
-        basicVertexIndex: cfg.basicVertexIndex,
-        in: (cfg.in || []).map(idx => Particles.get(catalog.particles[idx].id)),
-        out: (cfg.out || []).map(idx => Particles.get(catalog.particles[idx].id)),
-        order: cfg.order,
-        sympy_data: cfg.sympy_data
-      }));
+    // Reuse pre-resolved allowed configs across consecutive exactOrder searches
+    let allowedVertexConfigs = options._allowedConfigs;
+    if (!allowedVertexConfigs) {
+      allowedVertexConfigs = (catalog.vertexConfigurations || [])
+        .filter(cfg => isTheoryAllowed(cfg.order))
+        .map(cfg => ({
+          index: cfg.index,
+          basicVertexIndex: cfg.basicVertexIndex,
+          in: (cfg.in || []).map(idx => Particles.get(catalog.particles[idx].id) || catalog.particles[idx]),
+          out: (cfg.out || []).map(idx => Particles.get(catalog.particles[idx].id) || catalog.particles[idx]),
+          order: cfg.order,
+          sympy_data: cfg.sympy_data
+        }));
+      options._allowedConfigs = allowedVertexConfigs;
+    }
 
     const seenSignatures = new Set();
     return await searchDiagramsForExactTotalOrder({

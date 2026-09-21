@@ -147,7 +147,9 @@
         catalog: catalog
       };
 
-      const maxTotalOrder = Object.values(config.couplingOrders || {}).reduce((a, b) => a + (parseInt(b, 10) || 0), 0) || 12;
+      // Calculate max total order strictly as the sum of all coupling orders entered by the user
+      const maxTotalOrder = Object.values(config.couplingOrders || {})
+        .reduce((sum, val) => sum + Math.max(0, parseInt(val, 10) || 0), 0);
       const minTotalOrder = Math.max(0, parseInt(config.minTotalOrder, 10) || 0);
 
       this.abortToken = { aborted: false };
