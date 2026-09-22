@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://dga606.github.io/Particle-Physics-Calculators/sitemap.xml
